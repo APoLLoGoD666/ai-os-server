@@ -1,14 +1,54 @@
 "use strict";
-// markitdown bridge — converts any file/URL to markdown via Python subprocess.
-// Supports: PDF, DOCX, PPTX, XLSX, HTML, CSV, JSON, XML, images (OCR+EXIF),
-//           audio (transcription), EPub, ZIP, YouTube URLs, and more.
-// Install: pip install "markitdown[all]"
-// Optional LLM image descriptions: set ANTHROPIC_API_KEY + enable via opts
+// markitdown bridge — converts any file/URL to markdown.
+// On Render (RAG_SIDECAR_URL set): proxies to the Python sidecar via HTTP.
+// Locally: falls back to the local markitdown binary (pip install markitdown).
 const { spawn, spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const http  = require('http');
+const https = require('https');
 
+// ── Sidecar HTTP helpers ──────────────────────────────────────────────────────
+function _sidecarUrl() { return process.env.RAG_SIDECAR_URL || null; }
+
+function _sidecarUpload(buffer, filename) {
+    const base = _sidecarUrl();
+    if (!base) return Promise.reject(new Error('no sidecar'));
+    return new Promise((resolve, reject) => {
+        const url = new URL('/convert/file', base);
+        const lib  = url.protocol === 'https:' ? https : http;
+        const boundary = `--ApexMD${Date.now()}`;
+        const CRLF = '\r\n';
+        const head = Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="file"; filename="${filename}"${CRLF}Content-Type: application/octet-stream${CRLF}${CRLF}`);
+        const tail = Buffer.from(`${CRLF}--${boundary}--${CRLF}`);
+        const body = Buffer.concat([head, buffer, tail]);
+        const req = lib.request({ hostname: url.hostname, port: url.port || (url.protocol === 'https:' ? 443 : 80), path: url.pathname, method: 'POST', timeout: 90000, headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': body.length } }, res => {
+            let d = ''; res.on('data', c => { d += c; }); res.on('end', () => { try { resolve(JSON.parse(d)); } catch { reject(new Error('sidecar bad JSON')); } });
+        });
+        req.on('error', reject);
+        req.on('timeout', () => { req.destroy(); reject(new Error('sidecar upload timeout')); });
+        req.write(body); req.end();
+    });
+}
+
+function _sidecarUrl2convert(url) {
+    const base = _sidecarUrl();
+    if (!base) return Promise.reject(new Error('no sidecar'));
+    return new Promise((resolve, reject) => {
+        const target = new URL('/convert/url', base);
+        const lib = target.protocol === 'https:' ? https : http;
+        const body = Buffer.from(`url=${encodeURIComponent(url)}`);
+        const req = lib.request({ hostname: target.hostname, port: target.port || (target.protocol === 'https:' ? 443 : 80), path: target.pathname, method: 'POST', timeout: 90000, headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': body.length } }, res => {
+            let d = ''; res.on('data', c => { d += c; }); res.on('end', () => { try { resolve(JSON.parse(d)); } catch { reject(new Error('sidecar bad JSON')); } });
+        });
+        req.on('error', reject);
+        req.on('timeout', () => { req.destroy(); reject(new Error('sidecar URL timeout')); });
+        req.write(body); req.end();
+    });
+}
+
+// ── Local binary helper ───────────────────────────────────────────────────────
 function _run(args, timeoutMs = 60000) {
     return new Promise((resolve, reject) => {
         const proc = spawn('markitdown', args, { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -31,12 +71,21 @@ function _run(args, timeoutMs = 60000) {
 
 // Convert a file path on disk → markdown string
 async function convertFile(filePath) {
+    if (_sidecarUrl()) {
+        const buf = fs.readFileSync(filePath);
+        const r = await _sidecarUpload(buf, path.basename(filePath));
+        if (r.ok) return { success: true, markdown: r.markdown, source: filePath };
+    }
     const markdown = await _run([filePath]);
     return { success: true, markdown, source: filePath };
 }
 
 // Convert an in-memory Buffer → markdown (writes temp file, cleans up)
 async function convertBuffer(buffer, originalName) {
+    if (_sidecarUrl()) {
+        const r = await _sidecarUpload(buffer, originalName);
+        if (r.ok) return { success: true, markdown: r.markdown, source: originalName };
+    }
     const ext = path.extname(originalName) || '.bin';
     const tmp = path.join(os.tmpdir(), `apex-md-${Date.now()}${ext}`);
     try {
@@ -50,6 +99,10 @@ async function convertBuffer(buffer, originalName) {
 
 // Convert a URL directly — markitdown supports http(s), YouTube URLs natively
 async function convertUrl(url) {
+    if (_sidecarUrl()) {
+        const r = await _sidecarUrl2convert(url);
+        if (r.ok) return { success: true, markdown: r.markdown, source: url };
+    }
     const markdown = await _run([url]);
     return { success: true, markdown, source: url };
 }

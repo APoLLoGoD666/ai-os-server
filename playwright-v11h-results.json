@@ -1,0 +1,517 @@
+{
+  "pass": 85,
+  "fail": 0,
+  "total": 85,
+  "results": [
+    {
+      "id": "H-1-a",
+      "desc": "#nav-actions present in DOM",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-1-b",
+      "desc": "#page-actions present in DOM",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-1-c",
+      "desc": "Master reaches #page-actions via hash",
+      "status": "PASS",
+      "detail": "active=page-actions"
+    },
+    {
+      "id": "H-1-d",
+      "desc": "Master sees master surface",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-1-e",
+      "desc": "Master does NOT see stub",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-1-f",
+      "desc": "User sees stub message on ACTIONS",
+      "status": "PASS",
+      "detail": "APEX is preparing your Actions view — available once your ac"
+    },
+    {
+      "id": "H-2-a",
+      "desc": "Card includes WHAT field",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-2-b",
+      "desc": "Card includes WHY field",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-2-c",
+      "desc": "Card includes COST field",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-2-d",
+      "desc": "Card includes RISK field",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-2-e",
+      "desc": "Card includes Reversibility",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-2-f",
+      "desc": "Card includes Approve action",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-2-g",
+      "desc": "Priority chip present",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-2-h",
+      "desc": "Action icon present + no raw enum",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-3-a",
+      "desc": "Modal opens on Approve click",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-3-b",
+      "desc": "Modal has aria-modal dialog",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-3-c",
+      "desc": "Modal shows Cost detail",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-3-d",
+      "desc": "Escape closes modal",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-4-a",
+      "desc": "Undo banner appears after approve",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-4-b",
+      "desc": "Undo banner has countdown",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-4-c",
+      "desc": "Undo banner has Undo button",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-4-d",
+      "desc": "Undo banner clears on hide call",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-4-e",
+      "desc": "Irreversible task has reversibility=no",
+      "status": "PASS",
+      "detail": "r=no"
+    },
+    {
+      "id": "H-5-actnPendingPanel",
+      "desc": "actnPendingPanel has data-apex-state",
+      "status": "PASS",
+      "detail": "state=empty"
+    },
+    {
+      "id": "H-5-actnRecentPanel",
+      "desc": "actnRecentPanel has data-apex-state",
+      "status": "PASS",
+      "detail": "state=empty"
+    },
+    {
+      "id": "H-5-actnRunsPanel",
+      "desc": "actnRunsPanel has data-apex-state",
+      "status": "PASS",
+      "detail": "state=empty"
+    },
+    {
+      "id": "H-5-actnStandingPanel",
+      "desc": "actnStandingPanel has data-apex-state",
+      "status": "PASS",
+      "detail": "state=empty"
+    },
+    {
+      "id": "H-5-actnSelfCheckPanel",
+      "desc": "actnSelfCheckPanel has data-apex-state",
+      "status": "PASS",
+      "detail": "state=empty"
+    },
+    {
+      "id": "H-5-actnNotifPanel",
+      "desc": "actnNotifPanel has data-apex-state",
+      "status": "PASS",
+      "detail": "state=ready"
+    },
+    {
+      "id": "H-5-actnLiveFeedPanel",
+      "desc": "actnLiveFeedPanel has data-apex-state",
+      "status": "PASS",
+      "detail": "state=empty"
+    },
+    {
+      "id": "H-5-actnPermPanel",
+      "desc": "actnPermPanel has data-apex-state",
+      "status": "PASS",
+      "detail": "state=empty"
+    },
+    {
+      "id": "H-5-actnCapPanel",
+      "desc": "actnCapPanel has data-apex-state",
+      "status": "PASS",
+      "detail": "state=empty"
+    },
+    {
+      "id": "H-6-a",
+      "desc": "XSS payload in task_type does not execute",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-6-b",
+      "desc": "Task_type is HTML-escaped",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-6-c",
+      "desc": "Description is HTML-escaped",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-7-a",
+      "desc": "Reject click expands reason textarea",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-7-b",
+      "desc": "Cancel hides reason textarea",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-7-c",
+      "desc": "Confirm reject submits without error",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-8-a",
+      "desc": "Every card renders a priority chip",
+      "status": "PASS",
+      "detail": "chips=[\"Critical\",\"Important\",\"Standard\"]"
+    },
+    {
+      "id": "H-8-b",
+      "desc": "Critical/Urgent labels appear",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-8-c",
+      "desc": "Highest tier ranks first",
+      "status": "PASS",
+      "detail": "order=[\"b\",\"c\",\"a\"]"
+    },
+    {
+      "id": "H-8-d",
+      "desc": "Standard/lower tier ranks last",
+      "status": "PASS",
+      "detail": "order=[\"b\",\"c\",\"a\"]"
+    },
+    {
+      "id": "H-9-forbid-0",
+      "desc": "Absent from ACTIONS DOM: \"APPROVAL REQUIRED\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-9-forbid-1",
+      "desc": "Absent from ACTIONS DOM: \"AWAITING_APPROVAL\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-9-forbid-2",
+      "desc": "Absent from ACTIONS DOM: \"IN_PROGRESS\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-9-forbid-3",
+      "desc": "Absent from ACTIONS DOM: \"COMPLETED\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-9-forbid-4",
+      "desc": "Absent from ACTIONS DOM: \"FAILED\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-9-forbid-5",
+      "desc": "Absent from ACTIONS DOM: \"PROPOSED → APPROVAL_REQUIRED\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-9-forbid-6",
+      "desc": "Absent from ACTIONS DOM: \"PROPOSED →\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-9-t1",
+      "desc": "Plain \"Waiting for your approval\" appears",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-10-a",
+      "desc": "#actnNotifPanel present on ACTIONS",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-10-b",
+      "desc": "#actnNotifList present",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-10-c",
+      "desc": "#navActionsBadge present (unread aggregator)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-11-a",
+      "desc": "Master sees standing approvals panel",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-11-b",
+      "desc": "Master sees feature approvals panel",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-11-c",
+      "desc": "User does NOT see standing approvals",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-11-d",
+      "desc": "User does NOT see feature approvals",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-12-a",
+      "desc": "In-flight card renders for in_progress",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-12-b",
+      "desc": "Card shows \"APEX is working on this\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-12-c",
+      "desc": "Card includes status dot",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-13-a",
+      "desc": "Refresh button has aria-label",
+      "status": "PASS",
+      "detail": "aria-label=Refresh actions"
+    },
+    {
+      "id": "H-13-b",
+      "desc": "aria-busy present on panels",
+      "status": "PASS",
+      "detail": "busy=9"
+    },
+    {
+      "id": "H-13-c",
+      "desc": "section role=\"region\" present",
+      "status": "PASS",
+      "detail": "regions=10"
+    },
+    {
+      "id": "H-13-d",
+      "desc": "#actnPendingPanel is role=region",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-13-e",
+      "desc": "#actnRecentPanel is role=region",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-14-a",
+      "desc": "Pressing \"a\" routes to page-actions",
+      "status": "PASS",
+      "detail": "active=page-actions"
+    },
+    {
+      "id": "H-14-b",
+      "desc": "#page-business still reachable via switchPage",
+      "status": "PASS",
+      "detail": "active=page-business"
+    },
+    {
+      "id": "H-15-a",
+      "desc": "TODAY has today-actions-pending panel",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-15-b",
+      "desc": "Overflow link \"N more in Actions\" appears when >3",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-15-c",
+      "desc": "0 pending shows caught-up message",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-16-a",
+      "desc": "ActionsWsBridge exposed on window",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-16-b",
+      "desc": "No error when bridge tries to bind",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-17-a",
+      "desc": "Single-column layout at 375px",
+      "status": "PASS",
+      "detail": "display=flex"
+    },
+    {
+      "id": "H-17-b",
+      "desc": "2-column grid at 1024px",
+      "status": "PASS",
+      "detail": "display=grid cols=380px 380px"
+    },
+    {
+      "id": "H-17-c",
+      "desc": "3-column grid at 1280px",
+      "status": "PASS",
+      "detail": "display=grid cols=420px 300px 240px"
+    },
+    {
+      "id": "H-17-d",
+      "desc": "ACTIONS renders under three viewports",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-18-approvals",
+      "desc": "Hash #approvals resolves to page-actions",
+      "status": "PASS",
+      "detail": "active=page-actions"
+    },
+    {
+      "id": "H-18-agents",
+      "desc": "Hash #agents resolves to page-actions",
+      "status": "PASS",
+      "detail": "active=page-actions"
+    },
+    {
+      "id": "H-18-activity",
+      "desc": "Hash #activity resolves to page-actions",
+      "status": "PASS",
+      "detail": "active=page-actions"
+    },
+    {
+      "id": "REG-overview",
+      "desc": "OVERVIEW still renders after ACTIONS visit",
+      "status": "PASS",
+      "detail": "active=page-overview"
+    },
+    {
+      "id": "REG-command",
+      "desc": "COMMAND still renders after ACTIONS visit",
+      "status": "PASS",
+      "detail": "active=page-command"
+    },
+    {
+      "id": "REG-intelligence",
+      "desc": "INTELLIGENCE still renders after ACTIONS visit",
+      "status": "PASS",
+      "detail": "active=page-intelligence"
+    },
+    {
+      "id": "REG-memory",
+      "desc": "MEMORY still renders after ACTIONS visit",
+      "status": "PASS",
+      "detail": "active=page-memory"
+    },
+    {
+      "id": "REG-knowledge",
+      "desc": "KNOWLEDGE still renders after ACTIONS visit",
+      "status": "PASS",
+      "detail": "active=page-knowledge"
+    },
+    {
+      "id": "REG-console",
+      "desc": "No console errors during regression",
+      "status": "PASS",
+      "detail": "clean"
+    }
+  ]
+}

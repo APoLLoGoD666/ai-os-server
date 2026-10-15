@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>APEX — UX-18 MOBILE / RESPONSIVE</title>
+<style>
+/* ── UX-05 DESIGN TOKENS ─────────────────────────────────────────────────── */
+:root{
+  --bg:#0a0a0f;--surface:#111118;--surface-raised:#1a1a24;
+  --border:#2a2a3a;--border-subtle:#1e1e2a;
+  --tp:#e8e8f0;--ts:#9898b0;--tm:#5a5a70;
+  --accent:#6b6bff;--accent-dim:#3d3d8a;
+  --success:#22c55e;--warning:#f59e0b;--danger:#ef4444;--info:#3b82f6;
+  --font:system-ui,-apple-system,'Segoe UI',Helvetica,sans-serif;
+  --mono:'SF Mono','Consolas','Courier New',monospace;
+  --display:Georgia,'Palatino Linotype',serif;
+  --r4:4px;--r8:8px;--r12:12px;--r16:16px;
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s6:24px;
+  --touch:44px;
+  --header-h:48px;--bnav-h:56px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{height:100%;-webkit-text-size-adjust:100%}
+body{height:100%;background:#1c1c28;color:var(--tp);font-family:var(--font);font-size:13px;line-height:1.5;overflow:hidden}
+
+/* ── VIEWPORT SIMULATOR (prototype control bar) ──────────────────────────── */
+#simBar{background:#080810;border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;z-index:1000;position:relative}
+.sim-label{font-size:9px;color:var(--tm);letter-spacing:0.12em;text-transform:uppercase;margin-right:2px}
+.sim-btn{padding:4px 12px;border-radius:var(--r4);border:1px solid var(--border);background:transparent;color:var(--tm);cursor:pointer;font-size:10px;font-family:var(--font);transition:all 0.15s;min-height:32px;letter-spacing:0.04em}
+.sim-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.sim-btn:hover:not(.active){color:var(--ts)}
+.sim-info{font-size:10px;color:var(--tm);margin-left:auto}
+.sim-sc{display:flex;align-items:center;gap:6px;margin-left:12px}
+#scenarioSelect{background:var(--surface);border:1px solid var(--border);color:var(--ts);border-radius:var(--r4);padding:3px 8px;font-size:10px;font-family:var(--font);cursor:pointer;max-width:200px}
+
+/* ── WRAPPER ─────────────────────────────────────────────────────────────── */
+#outerWrap{flex:1;display:flex;justify-content:center;align-items:stretch;overflow:hidden;background:#1c1c28}
+#app{display:flex;flex-direction:column;background:var(--bg);width:100%;height:100%;position:relative;overflow:hidden;transition:max-width 0.3s,box-shadow 0.3s}
+.vp-mobile #app{max-width:390px;box-shadow:0 0 40px rgba(0,0,0,0.8)}
+.vp-tablet #app{max-width:834px;box-shadow:0 0 40px rgba(0,0,0,0.6)}
+.vp-desktop #app{max-width:1440px}
+
+/* ── HEADER ──────────────────────────────────────────────────────────────── */
+#header{display:flex;align-items:center;justify-content:space-between;padding:0 var(--s4);height:var(--header-h);border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface);padding-top:var(--safe-top)}
+.h-left{display:flex;align-items:center;gap:var(--s3)}
+.menu-btn{width:var(--touch);height:var(--touch);display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--ts);cursor:pointer;border-radius:var(--r8);font-size:20px;flex-shrink:0}
+.h-title{font-family:var(--display);font-size:15px;font-weight:600;letter-spacing:0.06em}
+.h-right{display:flex;align-items:center;gap:var(--s2)}
+.icon-btn{width:var(--touch);height:var(--touch);display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--ts);cursor:pointer;border-radius:var(--r8);font-size:18px;position:relative}
+.notif-dot{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:2px solid var(--surface)}
+.conn-sm{width:7px;height:7px;border-radius:50%;background:var(--success);flex-shrink:0}
+.conn-sm.warn{background:var(--warning)}.conn-sm.err{background:var(--danger)}.conn-sm.pulse{animation:cpulse 1s infinite}
+@keyframes cpulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* ── BODY ────────────────────────────────────────────────────────────────── */
+#body{display:flex;flex:1;overflow:hidden;position:relative}
+
+/* ── SIDE NAV / DRAWER ───────────────────────────────────────────────────── */
+#sideNav{position:absolute;left:0;top:0;bottom:0;width:280px;background:var(--surface);border-right:1px solid var(--border);transform:translateX(-100%);transition:transform 0.25s ease;z-index:100;display:flex;flex-direction:column;overflow-y:auto}
+#sideNav.open{transform:translateX(0)}
+#navOverlay{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity 0.25s;z-index:99}
+#navOverlay.on{opacity:0.5;pointer-events:auto}
+.nav-sec{font-size:9px;font-weight:600;letter-spacing:0.14em;color:var(--tm);padding:12px 16px 4px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:12px;padding:0 16px;color:var(--ts);cursor:pointer;border:none;background:transparent;width:100%;text-align:left;min-height:var(--touch);border-left:2px solid transparent;font-family:var(--font);font-size:13px;transition:background 0.1s}
+.nav-item:hover{background:var(--surface-raised);color:var(--tp)}
+.nav-item.active{background:var(--accent-dim);border-left-color:var(--accent);color:var(--tp)}
+.nav-icon{font-size:18px;width:24px;text-align:center;flex-shrink:0}
+.nav-sep{height:1px;background:var(--border-subtle);margin:6px 0}
+
+/* Tablet+: persistent side nav */
+.vp-tablet #sideNav,.vp-desktop #sideNav{position:relative;transform:none!important;flex-shrink:0}
+.vp-tablet #navOverlay,.vp-desktop #navOverlay{display:none!important}
+.vp-tablet .menu-btn,.vp-desktop .menu-btn{display:none}
+.vp-tablet #body,.vp-desktop #body{flex-direction:row}
+.vp-desktop #sideNav{width:260px}
+
+/* ── MAIN AREA ───────────────────────────────────────────────────────────── */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#connBanner{display:none;padding:8px var(--s4);font-size:11px;flex-shrink:0;align-items:center;justify-content:space-between;gap:8px}
+#connBanner.degraded{display:flex;background:#2a1a0a;border-bottom:1px solid #f59e0b55;color:var(--warning)}
+#connBanner.disconnected{display:flex;background:#2a0a0a;border-bottom:1px solid #ef444455;color:var(--danger)}
+#connBanner.reconnecting{display:flex;background:#2a1a0a;border-bottom:1px solid #f59e0b55;color:var(--warning)}
+.cb-btn{font-size:10px;padding:4px 10px;border-radius:var(--r4);border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer;font-family:var(--font);min-height:var(--touch);flex-shrink:0}
+#content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:var(--s4)}
+
+/* ── BOTTOM NAV ──────────────────────────────────────────────────────────── */
+#bnav{display:flex;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;padding-bottom:var(--safe-bottom)}
+.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--tm);min-height:var(--touch);padding:6px 2px;border:none;background:transparent;font-family:var(--font);transition:color 0.15s;position:relative}
+.bn-item.active{color:var(--accent)}
+.bn-icon{font-size:22px;line-height:1}
+.bn-label{font-size:8px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase}
+.bn-badge{position:absolute;top:5px;right:calc(50% - 16px);background:var(--danger);color:#fff;font-size:8px;font-weight:700;border-radius:10px;padding:1px 4px;border:2px solid var(--surface)}
+.vp-tablet #bnav,.vp-desktop #bnav{display:none}
+
+/* ── RIGHT PANEL (tablet+) ───────────────────────────────────────────────── */
+#rightPanel{display:none;flex-direction:column;border-left:1px solid var(--border);background:var(--surface);overflow-y:auto;flex-shrink:0;width:280px}
+.vp-tablet #rightPanel,.vp-desktop #rightPanel{display:flex}
+.vp-desktop #rightPanel{width:320px}
+.rp-label{font-size:10px;font-weight:600;letter-spacing:0.12em;color:var(--tm);padding:var(--s3) var(--s4);border-bottom:1px solid var(--border-subtle);text-transform:uppercase;flex-shrink:0}
+#rightContent{padding:var(--s3);overflow-y:auto;flex:1}
+
+/* ── VOICE FAB ───────────────────────────────────────────────────────────── */
+#voiceFab{position:absolute;bottom:calc(var(--bnav-h) + var(--safe-bottom) + 14px);right:16px;width:56px;height:56px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(107,107,255,0.45);z-index:50;transition:background 0.2s,transform 0.15s}
+#voiceFab:active{transform:scale(0.93)}
+#voiceFab.listening{background:#dc2626;animation:fabp 1.2s ease-in-out infinite}
+#voiceFab.speaking{background:var(--success)}
+#voiceFab.thinking{background:#7c3aed}
+@keyframes fabp{0%,100%{transform:scale(1);box-shadow:0 4px 20px rgba(220,38,38,0.5)}50%{transform:scale(1.1);box-shadow:0 6px 30px rgba(220,38,38,0.8)}}
+.vp-tablet #voiceFab,.vp-desktop #voiceFab{bottom:20px}
+
+/* ── VOICE OVERLAY ───────────────────────────────────────────────────────── */
+#voiceOverlay{position:absolute;inset:0;background:rgba(10,10,15,0.97);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;opacity:0;pointer-events:none;transition:opacity 0.2s}
+#voiceOverlay.on{opacity:1;pointer-events:auto}
+.orb{width:96px;height:96px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#9898ff,var(--accent));box-shadow:0 0 40px rgba(107,107,255,0.6);display:flex;align-items:center;justify-content:center;font-size:28px}
+.orb.listening{animation:orbp 1.5s ease-in-out infinite;box-shadow:0 0 60px rgba(107,107,255,0.9)}
+.orb.speaking{background:radial-gradient(circle at 35% 35%,#86efac,var(--success));box-shadow:0 0 40px rgba(34,197,94,0.6)}
+.orb.thinking{background:radial-gradient(circle at 35% 35%,#c084fc,#7c3aed);animation:orbspin 2s linear infinite}
+.orb.failed{background:radial-gradient(circle at 35% 35%,#fca5a5,var(--danger))}
+@keyframes orbp{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+@keyframes orbspin{from{filter:hue-rotate(0deg)}to{filter:hue-rotate(360deg)}}
+.vstate{font-size:13px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--tp)}
+.vtranscript{font-size:13px;color:var(--ts);text-align:center;max-width:280px;min-height:18px}
+.vprivacy{font-size:11px;color:var(--tm);text-align:center;max-width:260px;padding:8px 12px;background:var(--surface-raised);border-radius:var(--r12);border:1px solid var(--border)}
+.vwave{display:flex;align-items:flex-end;gap:3px;height:28px}
+.vw{width:4px;border-radius:3px 3px 0 0;background:var(--accent);animation:vwv 0.5s ease-in-out infinite alternate}
+.vw:nth-child(2){animation-delay:0.07s}.vw:nth-child(3){animation-delay:0.14s}.vw:nth-child(4){animation-delay:0.21s}.vw:nth-child(5){animation-delay:0.28s}.vw:nth-child(6){animation-delay:0.35s}
+@keyframes vwv{from{transform:scaleY(0.15)}to{transform:scaleY(1)}}
+.v-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.v-btn{padding:10px 20px;border-radius:var(--r12);border:1px solid var(--border);background:var(--surface-raised);color:var(--ts);cursor:pointer;font-size:13px;min-height:var(--touch);font-family:var(--font)}
+.v-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.v-btn.cancel{background:#2a0a0a;border-color:#ef444455;color:var(--danger)}
+.vo-state-dot{width:8px;height:8px;border-radius:50%}
+
+/* ── BOTTOM SHEET ────────────────────────────────────────────────────────── */
+#sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--border);border-radius:16px 16px 0 0;transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);z-index:150;max-height:82vh;display:flex;flex-direction:column}
+#sheet.open{transform:translateY(0)}
+.sheet-handle{width:40px;height:4px;border-radius:2px;background:var(--border);margin:12px auto 8px;flex-shrink:0}
+.sheet-hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 16px 12px;flex-shrink:0;border-bottom:1px solid var(--border)}
+.sheet-title{font-size:13px;font-weight:600;color:var(--tp)}
+.sheet-close{width:var(--touch);height:32px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--tm);cursor:pointer;font-size:20px;border-radius:var(--r8);margin-right:-8px}
+.sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1;padding:var(--s4)}
+.vp-tablet #sheet,.vp-desktop #sheet{display:none}
+
+/* ── CARDS & COMPONENTS ──────────────────────────────────────────────────── */
+.card{background:var(--surface-raised);border:1px solid var(--border);border-radius:var(--r12);padding:var(--s3);margin-bottom:var(--s2)}
+.card.tap{cursor:pointer;transition:border-color 0.15s}
+.card.tap:active{background:#1e1e2a}
+.card-title{font-size:12px;font-weight:600;color:var(--tp);margin-bottom:5px}
+.card-body{font-size:12px;color:var(--ts);line-height:1.5}
+.card-badges{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+.card-meta{font-size:10px;color:var(--tm);margin-top:5px}
+
+/* BADGES */
+.b{display:inline-flex;align-items:center;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;letter-spacing:0.06em;text-transform:uppercase}
+.b-agent{background:#1a1a0a;color:#facc15;border:1px solid #ca8a0433}
+.b-voice{background:#1a1a2a;color:var(--accent);border:1px solid var(--accent-dim)}
+.b-approval{background:#2a1a0a;color:var(--warning);border:1px solid #f59e0b33}
+.b-action{background:#0a2a1a;color:var(--success);border:1px solid #22c55e33}
+.b-memory{background:#0a1a2a;color:#67e8f9;border:1px solid #06b6d433}
+.b-knowledge{background:#0a2a1a;color:#4ade80;border:1px solid #16a34a33}
+.b-const{background:#1a0a2a;color:#a78bfa;border:1px solid #7c3aed33}
+.b-error{background:#2a0a0a;color:var(--danger);border:1px solid #ef444433}
+.b-system{background:#1a1a2a;color:var(--ts);border:1px solid var(--border)}
+.b-activity{background:#0a1a2a;color:#60a5fa;border:1px solid #3b82f633}
+.b-domain{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-dim)}
+/* LIFECYCLE */
+.ls{display:inline-flex;align-items:center;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:0.06em;text-transform:uppercase}
+.ls-await{background:#2a1a0a;color:var(--warning);border:1px solid #f59e0b55;animation:apls 2s infinite}
+.ls-blocked{background:#2a0a0a;color:var(--danger);border:1px solid #ef444455}
+.ls-done{background:#0a2a1a;color:var(--success);border:1px solid #22c55e55}
+.ls-exec{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)}
+.ls-failed{background:#2a0a0a;color:var(--danger);border:1px solid #ef444455}
+.ls-proposed{background:#1a1a2a;color:var(--ts);border:1px solid var(--border)}
+.ls-approved{background:#0a2a1a;color:var(--success);border:1px solid #22c55e44}
+@keyframes apls{0%,100%{opacity:1}50%{opacity:0.6}}
+
+/* DOMAIN PILLS */
+.dom-row{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;margin-bottom:var(--s3);scrollbar-width:none}
+.dom-row::-webkit-scrollbar{display:none}
+.dom-pill{flex-shrink:0;padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surface-raised);color:var(--tm);cursor:pointer;font-size:11px;font-weight:600;min-height:var(--touch);white-space:nowrap;display:flex;align-items:center;transition:all 0.15s}
+.dom-pill.active{background:var(--accent-dim);border-color:var(--accent);color:var(--tp)}
+.dom-pill:active{opacity:0.75}
+
+/* DISCLOSURE */
+.dl-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:var(--s3)}
+.dl-btn{padding:6px 12px;border-radius:var(--r4);border:1px solid var(--border);background:transparent;color:var(--tm);cursor:pointer;font-size:11px;font-family:var(--font);min-height:var(--touch);min-width:42px}
+.dl-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* EVIDENCE / PROVENANCE */
+.ev-block{background:var(--surface-raised);border:1px solid var(--border);border-radius:var(--r8);padding:var(--s3);font-family:var(--mono);font-size:10px;margin-bottom:var(--s2);overflow-x:auto}
+.ev-row{display:flex;gap:8px;padding:2px 0;color:var(--ts)}
+.ek{color:var(--tm);width:100px;flex-shrink:0}
+.pvbox{background:#16001a;border:1px solid #9333ea55;border-radius:var(--r8);padding:var(--s3);margin-bottom:var(--s2);text-align:center}
+.pvbox .pvi{font-size:22px;color:#a855f7;margin-bottom:4px}
+.pvbox .pvt{font-size:10px;font-weight:700;color:#a855f7;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px}
+.pvbox p{font-size:11px;color:#c084fc;line-height:1.5}
+.info-box{background:#0a1a2a;border:1px solid #3b82f655;border-radius:var(--r8);padding:var(--s3);margin-bottom:var(--s2)}
+.info-box p{font-size:11px;color:#93c5fd;line-height:1.5}
+.warn-box{background:#2a1a0a;border:1px solid #f59e0b55;border-radius:var(--r8);padding:var(--s3);margin-bottom:var(--s2)}
+.warn-box p{font-size:11px;color:#fcd34d;line-height:1.5}
+.danger-box{background:#2a0a0a;border:1px solid #ef444455;border-radius:var(--r8);padding:var(--s3);margin-bottom:var(--s2)}
+.danger-box p{font-size:11px;color:#fca5a5;line-height:1.5}
+.success-box{background:#0a2a1a;border:1px solid #22c55e55;border-radius:var(--r8);padding:var(--s3);margin-bottom:var(--s2)}
+.success-box p{font-size:11px;color:#86efac;line-height:1.5}
+
+/* APPROVAL */
+.appr-area{background:var(--surface-raised);border:1px solid #f59e0b55;border-radius:var(--r12);padding:var(--s4);margin-bottom:var(--s3)}
+.appr-label{font-size:10px;color:var(--warning);font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.08em}
+.appr-action{font-size:13px;color:var(--tp);margin-bottom:var(--s3);line-height:1.4}
+.appr-safety{font-size:10px;color:var(--tm);margin-bottom:var(--s3)}
+.appr-btns{display:flex;gap:var(--s2)}
+.appr-btn{flex:1;padding:12px;border-radius:var(--r8);border:1px solid;cursor:pointer;font-size:13px;font-weight:600;min-height:var(--touch);font-family:var(--font)}
+.appr-btn.approve{background:#0a2a1a;border-color:#22c55e55;color:var(--success)}
+.appr-btn.decline{background:#2a0a0a;border-color:#ef444455;color:var(--danger)}
+#apprConfirm{display:none;margin-top:var(--s2)}
+#apprConfirm .warn-box{cursor:pointer}
+#apprConfirm .warn-box:active{opacity:0.8}
+
+/* DETAIL ROWS */
+.dr{display:flex;justify-content:space-between;align-items:flex-start;padding:4px 0;border-bottom:1px solid var(--border-subtle);font-size:11px}
+.dr:last-child{border-bottom:none}
+.dk{color:var(--tm);flex-shrink:0;width:90px}
+.dv{color:var(--ts);text-align:right;word-break:break-all;font-size:11px}
+
+/* GATE CHAIN (vertical for mobile) */
+.gate-chain{display:flex;flex-direction:column;gap:4px;margin-bottom:var(--s3)}
+.gate-step{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--r4);border:1px solid var(--border-subtle);font-size:11px;color:var(--ts)}
+.gate-step.pass{background:#0a2a1a;border-color:#22c55e33;color:var(--success)}
+.gate-step.fail{background:#2a0a0a;border-color:#ef444433;color:var(--danger)}
+.gate-icon{font-size:14px;flex-shrink:0}
+
+/* ACTIVITY EVENTS */
+.ev-card{background:var(--surface-raised);border:1px solid var(--border);border-radius:var(--r12);padding:var(--s3);margin-bottom:var(--s2);cursor:pointer;transition:border-color 0.15s}
+.ev-card.active{border-color:var(--accent)}
+.ev-card:active{background:#1e1e2a}
+.ev-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:5px}
+.ev-time{font-size:10px;color:var(--tm);font-family:var(--mono);flex-shrink:0}
+.ev-desc{font-size:12px;color:var(--tp);line-height:1.4;margin-bottom:4px}
+.ev-meta{font-size:10px;color:var(--tm)}
+.stale-tag{font-size:9px;font-weight:700;color:var(--warning);border:1px solid #f59e0b55;border-radius:3px;padding:1px 5px;margin-left:4px}
+
+/* SC NOTE */
+.sc-note{background:var(--surface-raised);border:1px solid var(--border-subtle);border-radius:var(--r4);padding:6px var(--s3);font-size:10px;color:var(--tm);margin-bottom:var(--s3);line-height:1.5}
+
+/* SCROLLBARS */
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* FOCUS */
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+
+/* LANDSCAPE */
+@media(max-height:500px) and (max-width:1024px){
+  :root{--header-h:40px;--bnav-h:48px}
+  .orb{width:64px;height:64px}
+  #voiceOverlay{flex-direction:row;gap:16px;flex-wrap:wrap}
+}
+
+/* REDUCED MOTION */
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition-duration:0.01ms!important}
+}
+</style>
+</head>
+<body style="display:flex;flex-direction:column;height:100vh">
+
+<!-- VIEWPORT SIMULATOR -->
+<div id="simBar" role="toolbar" aria-label="Viewport simulator">
+  <span class="sim-label">Viewport</span>
+  <button class="sim-btn active" onclick="setVP('mobile')" id="vp-m" aria-pressed="true">📱 Mobile (390)</button>
+  <button class="sim-btn" onclick="setVP('tablet')" id="vp-t" aria-pressed="false">📟 Tablet (834)</button>
+  <button class="sim-btn" onclick="setVP('desktop')" id="vp-d" aria-pressed="false">🖥 Desktop</button>
+  <div class="sim-sc">
+    <label for="scenarioSelect" class="sim-label">Scenario</label>
+    <select id="scenarioSelect" onchange="loadScenario(this.value)" aria-label="Select scenario"></select>
+  </div>
+  <span class="sim-info" id="simInfo">390 × mobile portrait</span>
+</div>
+
+<!-- OUTER WRAP -->
+<div id="outerWrap" class="vp-mobile">
+
+<!-- APP -->
+<div id="app" role="application" aria-label="APEX Mobile Interface">
+
+  <!-- HEADER -->
+  <header id="header" role="banner">
+    <div class="h-left">
+      <button class="menu-btn" onclick="toggleNav()" aria-label="Open navigation" aria-expanded="false" id="menuBtn">☰</button>
+      <span class="h-title">APEX</span>
+    </div>
+    <div class="h-right">
+      <div class="conn-sm" id="connDot" title="Connection: LIVE" aria-label="Connection: live"></div>
+      <button class="icon-btn" onclick="showSheet('notif')" aria-label="Notifications">
+        🔔<span class="notif-dot" id="notifDot" aria-label="Unread notifications"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- BODY -->
+  <div id="body">
+
+    <!-- SIDE NAV / DRAWER -->
+    <nav id="sideNav" aria-label="Primary navigation" aria-hidden="true">
+      <div class="nav-sec">Primary</div>
+      <button class="nav-item active" onclick="setNavActive(this);closeNav()" aria-label="Command Centre"><span class="nav-icon">⌘</span>Command</button>
+      <button class="nav-item" onclick="setNavActive(this);closeNav()" aria-label="Activity"><span class="nav-icon">◎</span>Activity</button>
+      <button class="nav-item" onclick="setNavActive(this);closeNav()" aria-label="Agents"><span class="nav-icon">◈</span>Agents</button>
+      <button class="nav-item" onclick="setNavActive(this);closeNav()" aria-label="Memory"><span class="nav-icon">◉</span>Memory</button>
+      <div class="nav-sep"></div>
+      <div class="nav-sec">Domains</div>
+      <button class="nav-item" onclick="setNavActive(this);closeNav()"><span class="nav-icon">📈</span>Finance</button>
+      <button class="nav-item" onclick="setNavActive(this);closeNav()"><span class="nav-icon">🎓</span>Education</button>
+      <button class="nav-item" onclick="setNavActive(this);closeNav()"><span class="nav-icon">💼</span>Business</button>
+      <button class="nav-item" onclick="setNavActive(this);closeNav()"><span class="nav-icon">🏥</span>Health</button>
+      <div class="nav-sep"></div>
+      <div class="nav-sec">System</div>
+      <button class="nav-item" onclick="setNavActive(this);closeNav()"><span class="nav-icon">⊛</span>Constitutional</button>
+      <button class="nav-item" onclick="setNavActive(this);closeNav()"><span class="nav-icon">⚙</span>Settings</button>
+    </nav>
+    <div id="navOverlay" onclick="closeNav()" aria-hidden="true"></div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main">
+      <!-- CONNECTION BANNER -->
+      <div id="connBanner" role="alert" aria-live="assertive">
+        <span id="connBannerText"></span>
+        <button class="cb-btn" onclick="simulateReconnect()" id="connBannerBtn">Retry</button>
+      </div>
+      <!-- CONTENT AREA -->
+      <div id="content" role="main" aria-label="Main content"></div>
+    </div>
+
+    <!-- RIGHT PANEL (tablet+) -->
+    <aside id="rightPanel" aria-label="Detail panel">
+      <div class="rp-label">Detail</div>
+      <div id="rightContent"></div>
+    </aside>
+
+  </div><!-- /body -->
+
+  <!-- BOTTOM NAV -->
+  <nav id="bnav" aria-label="Bottom navigation">
+    <button class="bn-item active" onclick="setBnavActive(this)" aria-label="Command"><span class="bn-icon">⌘</span><span class="bn-label">Command</span></button>
+    <button class="bn-item" onclick="setBnavActive(this)" aria-label="Activity"><span class="bn-icon">◎</span><span class="bn-label">Activity</span></button>
+    <button class="bn-item" onclick="setBnavActive(this)" aria-label="Agents"><span class="bn-icon">◈</span><span class="bn-label">Agents</span></button>
+    <button class="bn-item" onclick="setBnavActive(this)" aria-label="Memory"><span class="bn-icon">◉</span><span class="bn-label">Memory</span><span class="bn-badge" id="bnavBadge">3</span></button>
+    <button class="bn-item" onclick="setBnavActive(this)" aria-label="System"><span class="bn-icon">⊛</span><span class="bn-label">System</span></button>
+  </nav>
+
+  <!-- VOICE FAB -->
+  <button id="voiceFab" onclick="toggleVoice()" aria-label="Activate voice" aria-pressed="false">🎙</button>
+
+  <!-- VOICE OVERLAY -->
+  <div id="voiceOverlay" role="dialog" aria-modal="true" aria-label="Voice interface" aria-hidden="true">
+    <div class="orb" id="voiceOrb" aria-hidden="true">🎙</div>
+    <div class="vstate" id="voiceState" aria-live="assertive">IDLE</div>
+    <div class="vwave" id="voiceWave" aria-hidden="true">
+      <div class="vw"></div><div class="vw"></div><div class="vw"></div>
+      <div class="vw"></div><div class="vw"></div><div class="vw"></div>
+    </div>
+    <div class="vtranscript" id="voiceTranscript" aria-live="polite"></div>
+    <div class="vprivacy" id="voicePrivacy" style="display:none">⊘ THINKING — internal reasoning is not exposed</div>
+    <div class="v-actions" id="voiceActions">
+      <button class="v-btn cancel" onclick="cancelVoice()">Cancel</button>
+      <button class="v-btn" onclick="bargeIn()" id="bargeInBtn" style="display:none">Interrupt</button>
+    </div>
+  </div>
+
+  <!-- BOTTOM SHEET -->
+  <div id="sheet" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="sheet-hdr">
+      <span class="sheet-title" id="sheetTitle">Detail</span>
+      <button class="sheet-close" onclick="closeSheet()" aria-label="Close">✕</button>
+    </div>
+    <div class="sheet-body" id="sheetBody"></div>
+  </div>
+
+</div><!-- /app -->
+</div><!-- /outerWrap -->
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let currentVP = 'mobile';
+let voiceActive = false;
+let voiceStep = 0;
+let voiceTimer = null;
+let currentScenario = 'V-MOBILE-01';
+let connState = 'live';
+
+// ─── SCENARIOS ────────────────────────────────────────────────────────────────
+const SCENARIOS = {
+'V-MOBILE-01':{
+  name:'Mobile Command Centre',
+  notes:'Bottom tab bar + voice FAB + hamburger drawer. Command Centre entry on mobile. Touch targets 44px minimum.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-01 — Mobile Command Centre. Tap ☰ to open navigation drawer. Tap 🎙 FAB to activate voice. Bottom tab bar shows 5 primary destinations.</div>
+    <div class="dom-row" role="group" aria-label="Domain filter">
+      ${['All','Finance','Business','Education','Health','System'].map((d,i)=>`<button class="dom-pill${i===0?' active':''}" onclick="toggleDom(this)">${d}</button>`).join('')}
+    </div>
+    <div class="card tap" onclick="showSheet('task')" tabindex="0" role="button" aria-label="Task T-2847 detail">
+      <div class="card-badges"><span class="b b-agent">AGENT</span><span class="ls ls-exec">IN PROGRESS</span></div>
+      <div class="card-title">Task T-2847: Research market opportunity</div>
+      <div class="card-body">Agent apex-agent-01 — stage 2/4 — 23s elapsed</div>
+      <div class="card-meta">👤 apex-agent-01 · Domain: BUSINESS · Tap for detail →</div>
+    </div>
+    <div class="card tap" onclick="showSheet('notif')" tabindex="0">
+      <div class="card-badges"><span class="b b-activity">NOTIFICATION</span></div>
+      <div class="card-title">Pipeline T-2822 complete</div>
+      <div class="card-body">Financial summary generated successfully.</div>
+      <div class="card-meta">2 min ago · Unread</div>
+    </div>
+    <div class="card">
+      <div class="card-badges"><span class="b b-system">SYSTEM</span></div>
+      <div class="card-title">Self-check: 9/9 subsystems healthy</div>
+      <div class="card-body">Memory, Supabase, Event bus, Agent queue, Vault, Embeddings, Notion, Slack, Sentry — all GREEN.</div>
+      <div class="card-meta">Last checked: 60s ago</div>
+    </div>`);
+    setRight('<div class="info-box"><p>ONE APEX — command surface. Mobile layout: bottom tab nav + voice FAB. Desktop: persistent side nav + three-panel layout. Same system — different presentation.</p></div>');
+  }
+},
+'V-MOBILE-02':{
+  name:'Navigation',
+  notes:'Hamburger drawer slide-in with all destinations. Domain switching, system access. Mobile navigation model.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-02 — Navigation. Tap ☰ (top-left) to open the slide-in navigation drawer. All destinations available — same ONE APEX surface.</div>
+    <div class="info-box"><p>Mobile navigation model: bottom tab bar for 5 primary destinations. Hamburger drawer for secondary + domain switching + system/constitutional. Same destinations as desktop side nav — never a separate application.</p></div>
+    <div class="card">
+      <div class="card-title">Bottom Tab Bar (mobile primary)</div>
+      <div class="card-body">⌘ Command · ◎ Activity · ◈ Agents · ◉ Memory · ⊛ System<br>Each tab: min 44×44px touch target.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Drawer (secondary + domains)</div>
+      <div class="card-body">Finance · Education · Business · Health · Constitutional · Settings<br>Swipe right anywhere → open drawer. Tap overlay → close.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Tablet/Desktop Navigation</div>
+      <div class="card-body">Persistent side nav (240px tablet, 260px desktop). All destinations always visible. No hamburger needed.</div>
+    </div>`);
+    setRight('<div class="card"><div class="card-title">Navigation invariant</div><div class="card-body">ONE navigation system. Mobile drawer + bottom tabs are the mobile-optimised presentation of the same destinations. Not a separate mobile navigation product.</div></div>');
+    setTimeout(()=>toggleNav(), 400);
+  }
+},
+'V-MOBILE-03':{
+  name:'Voice — Listening',
+  notes:'Voice FAB → full-screen overlay. LISTENING state. Orb pulsing. Waveform animating. Constitutional model unchanged.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-03 — Voice interaction. Tap the 🎙 FAB (bottom right) to enter voice mode. Shows LISTENING state with pulsing orb and waveform.</div>
+    <div class="card">
+      <div class="card-title">Voice States on Mobile (UX-07)</div>
+      <div class="card-body">IDLE → ACTIVATING → LISTENING → UNDERSTANDING → THINKING → SPEAKING → INTERRUPTED/COMPLETED<br><br>Voice FAB (56px) shows state via colour + animation. Full-screen overlay during active states.</div>
+    </div>
+    <div class="info-box"><p>Voice operates under the same constitutional model as desktop. A2-CONSENT and A3-OWNERSHIP apply. No mobile shortcut bypasses governance.</p></div>`);
+    setRight('<div class="info-box"><p>Voice on mobile: THINKING shows state indicator only. Internal reasoning: PROTECTED — NOT EXPOSED. Same privacy boundary as desktop.</p></div>');
+    setTimeout(()=>startVoice('listening'), 600);
+  }
+},
+'V-MOBILE-04':{
+  name:'Voice — Interruption',
+  notes:'User interrupts during SPEAKING. USER_INTERRUPTED event emitted. Overlay closes cleanly.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-04 — Voice interruption. Voice starts SPEAKING then user interrupts (Interrupt button appears during SPEAKING state).</div>
+    <div class="card">
+      <div class="card-title">Barge-in behaviour</div>
+      <div class="card-body">During SPEAKING: Interrupt button appears in voice overlay. Tap → USER_INTERRUPTED event emitted → overlay closes → FAB returns to idle.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Clean shutdown</div>
+      <div class="card-body">INTERRUPTED state is observable. Activity record shows USER_INTERRUPTED. No partial output committed.</div>
+    </div>`);
+    setRight('<div class="card"><div class="card-title">Event bus</div><div class="card-body">USER_INTERRUPTED event emitted via lib/event-bus.js. Canonical event type. Observable in activity stream.</div></div>');
+    setTimeout(()=>startVoice('speaking'), 600);
+  }
+},
+'V-MOBILE-05':{
+  name:'Voice — THINKING / Privacy',
+  notes:'THINKING state visible as lifecycle state only. ⊘ Internal reasoning NOT exposed. Hard privacy boundary.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-05 — Voice THINKING + privacy boundary. THINKING is a lifecycle state — not a transcript. Chain-of-thought is PROTECTED at all viewport sizes.</div>
+    <div class="pvbox"><div class="pvi">⊘</div><div class="pvt">Private Chain-of-Thought</div><p>Internal reasoning is never exposed at any viewport size or disclosure level. THINKING is an observable state label only.</p></div>
+    <div class="info-box"><p>This is a canonical UX-17 + UX-18 invariant. No mobile shortcut reveals private reasoning. The observability surface shows: state, not thought.</p></div>`);
+    setRight('<div class="pvbox"><div class="pvi">⊘</div><div class="pvt">INV-MOB-27</div><p>THINKING state is observable. Internal reasoning is NOT exposed on any viewport.</p></div>');
+    setTimeout(()=>startVoice('thinking'), 600);
+  }
+},
+'V-MOBILE-06':{
+  name:'Voice — Failure',
+  notes:'FAILED state. Red orb. Error message. Recovery options. Microphone permission failure → text fallback.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-06 — Voice failure. Shows FAILED state with red orb and recovery options. Microphone permission denied → text input fallback.</div>
+    <div class="danger-box"><p>Voice failed: microphone permission denied. Grant permission in device settings to use voice input.</p></div>
+    <div class="card">
+      <div class="card-title">Text fallback</div>
+      <div class="card-body">When voice fails or microphone is unavailable, APEX falls back to text input. No capability loss — same constitutional model applies.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Recovery options</div>
+      <div class="card-body">Try again / Use text / Check permissions. All shown in overlay before dismissal.</div>
+    </div>`);
+    setRight('<div class="danger-box"><p>FAILED state is explicit and visible. Not hidden. Recovery options are prominent. 44px touch targets on all recovery buttons.</p></div>');
+    setTimeout(()=>startVoice('failed'), 600);
+  }
+},
+'V-MOBILE-07':{
+  name:'Contextual Presentation L0',
+  notes:'L0 disclosure: single-sentence card. Minimum information. Always fits any viewport.',
+  conn:'live',
+  render(){
+    let dl=0;
+    function upd(l){dl=l;['l0','l1','l2','l3','l4'].forEach((x,i)=>document.getElementById('dlb'+i).classList.toggle('active',i===l));
+    const bodies=['An agent completed a task.','Agent apex-agent-fin completed task T-2847 at 14:23:07 on mobile surface.','Duration: 94s · Model: claude-sonnet-4-6 · Cost: $0.023 · Stages: 4/4 · Outcome: Success · Severity: INFO',`<div class="ev-block"><div class="ev-row"><span class="ek">evidence:</span><span>apex_timeline — commit a3f7e29</span></div><div class="ev-row"><span class="ek">provenance:</span><span>lib/auto-pipeline.js</span></div><div class="ev-row"><span class="ek">correlation:</span><span>NOT AVAILABLE</span></div></div>`,`<div class="pvbox"><div class="pvi">⊘</div><div class="pvt">L4 — Privacy Boundary</div><p>Constitutional: A1+A3+A4 PASS. Execution: EXECUTED — not merely proposed. Chain-of-thought: PROTECTED.</p></div>`];
+    document.getElementById('dlbody').innerHTML=bodies[l];}
+    setContent(`<div class="sc-note">📱 V-MOBILE-07 — Contextual presentation L0. Single-sentence disclosure. Tap L1–L4 to reveal more. L3/L4 open bottom sheet on mobile.</div>
+    <div class="dl-row" role="group" aria-label="Disclosure level">${[0,1,2,3,4].map(i=>`<button class="dl-btn${i===0?' active':''}" id="dlb${i}" onclick="(${upd.toString()})(${i})" aria-pressed="${i===0}">L${i}</button>`).join('')}</div>
+    <div class="card"><div class="card-badges"><span class="b b-agent">AGENT</span><span class="ls ls-done">COMPLETED</span></div><div id="dlbody" class="card-body">An agent completed a task.</div></div>`);
+    setRight('<div class="info-box"><p>L0–L2: visible inline on mobile. L3–L4: shown in bottom sheet (mobile) or right panel (tablet+). Evidence is NEVER removed — only relocated to an appropriate surface.</p></div>');
+  }
+},
+'V-MOBILE-08':{
+  name:'Progressive Disclosure L3',
+  notes:'L3 on mobile: bottom sheet with evidence block, provenance, related records. Tap card to expand.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-08 — L3 disclosure. Tap the event card to open the bottom sheet with evidence, provenance, and related records.</div>
+    <div class="ev-card tap active" onclick="showSheet('l3')" tabindex="0" role="button">
+      <div class="ev-card-top"><div class="card-badges"><span class="b b-knowledge">KNOWLEDGE</span></div><span class="ev-time">14:23:07</span></div>
+      <div class="ev-desc">Knowledge updated — ANTHR-Q3-2026 validated — 3 evidence items</div>
+      <div class="ev-meta">👤 apex-agent-res · Tap for L3 evidence ↓</div>
+    </div>
+    <div class="info-box"><p>On mobile: L3 content (evidence + provenance + related records) appears in a bottom sheet. The same content appears in the right panel on tablet/desktop. Evidence is never removed — only repositioned.</p></div>`);
+    setRight('<div class="info-box"><p>L3 right panel — same content as bottom sheet on mobile:</p></div>'+l3DetailHTML());
+    setTimeout(()=>showSheet('l3'),800);
+  }
+},
+'V-MOBILE-09':{
+  name:'Progressive Disclosure L4',
+  notes:'L4 on mobile: bottom sheet full-height. Constitutional detail + governance pointer + privacy boundary.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-09 — L4 disclosure. Bottom sheet full-height with constitutional gate chain and privacy boundary. L4 is always accessible — not removed on mobile.</div>
+    <div class="ev-card tap" onclick="showSheet('l4')" tabindex="0" role="button">
+      <div class="ev-card-top"><div class="card-badges"><span class="b b-const">CONSTITUTIONAL</span></div><span class="ev-time">14:23:05</span></div>
+      <div class="ev-desc">Constitutional check — A3-OWNERSHIP — file_write /vault/memory.md — ALLOW</div>
+      <div class="ev-meta">Tap for L4 constitutional detail ↓</div>
+    </div>`);
+    setRight(l4DetailHTML());
+    setTimeout(()=>showSheet('l4'),800);
+  }
+},
+'V-MOBILE-10':{
+  name:'Proactive Notification',
+  notes:'Proactive notification lifecycle: generated → evaluated → queued → banner → acknowledged. Dismiss by tap.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-10 — Proactive notification. Shows notification banner at top + notification centre. Dismiss via tap or swipe.</div>
+    <div class="warn-box"><p>⚡ Proactive — Q3 briefing ready — urgency: HIGH — tap to view or dismiss</p></div>
+    <div class="card">
+      <div class="card-title">Notification Centre</div>
+      <div class="ev-card"><div class="ev-card-top"><div class="card-badges"><span class="b b-activity">NOTIFICATION</span></div><span class="ev-time">just now</span></div><div class="ev-desc">Q3 briefing ready — tap to view</div><div class="ev-meta">Lifecycle: PRESENTED · Unread</div></div>
+      <div class="ev-card"><div class="ev-card-top"><div class="card-badges"><span class="b b-activity">NOTIFICATION</span></div><span class="ev-time">5 min ago</span></div><div class="ev-desc">Pipeline T-2822 complete — financial summary generated</div><div class="ev-meta">Lifecycle: ACKNOWLEDGED · Read</div></div>
+    </div>
+    <div class="info-box"><p>Proactive communication uses the same pipeline as desktop (UX-09). Push notifications require system permission — same governance applies. NOT a second proactive system.</p></div>`);
+    setRight('<div class="info-box"><p>Proactive lifecycle: GENERATED → EVALUATED (urgency: HIGH) → QUEUED → PRESENTED → [ACKNOWLEDGED / DISMISSED / DEFERRED]. Same pipeline — mobile changes only the presentation layer.</p></div>');
+  }
+},
+'V-MOBILE-11':{
+  name:'Domain Switching',
+  notes:'Horizontal scrollable domain pill row. Finance domain active. Domains are lenses over ONE APEX.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-11 — Domain switching. Scroll the pill row horizontally. Tap a domain to filter. Domains are lenses — not separate apps.</div>
+    <div class="dom-row" role="group" aria-label="Domain filter">
+      ${['All','Finance','Business','Education','Health','Operations','System'].map((d,i)=>`<button class="dom-pill${i===1?' active':''}" onclick="toggleDom(this)">${i===1?'📈 ':''+''}${d}</button>`).join('')}
+    </div>
+    <div class="card"><div class="card-badges"><span class="b b-domain">FINANCE</span></div><div class="card-title">Q3 Financial Performance</div><div class="card-body">Revenue: +12% YoY · Margin: 34% · Pipeline: healthy<br>Agent: apex-agent-fin · Last updated: 14:20:00</div></div>
+    <div class="card"><div class="card-badges"><span class="b b-domain">FINANCE</span><span class="ls ls-await">AWAITING APPROVAL</span></div><div class="card-title">Decision: Reduce equity by 8%</div><div class="card-body">Financial intelligence recommendation. Requires user approval before any execution.</div></div>
+    <div class="info-box"><p>Finance is a lens over ONE APEX — not a separate finance application. Domain switching changes the filter context only. Same governance applies across all domains.</p></div>`);
+    setRight('<div class="info-box"><p>Domain invariant: domains are lenses over ONE APEX. Switching domains does not change constitutional, governance, or execution semantics.</p></div>');
+  }
+},
+'V-MOBILE-12':{
+  name:'Knowledge / Evidence',
+  notes:'Knowledge card with confidence badge. Tap for evidence bottom sheet. Provenance at L3.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-12 — Knowledge + evidence. Knowledge card with confidence badge. Tap for L3 evidence bottom sheet.</div>
+    <div class="card tap" onclick="showSheet('l3')" tabindex="0">
+      <div class="card-badges"><span class="b b-knowledge">KNOWLEDGE</span></div>
+      <div class="card-title">Anthropic Q3 2026 results</div>
+      <div class="card-body">Revenue exceeded analyst estimates by 18%. Model releases accelerated. 3 evidence items.</div>
+      <div class="card-meta">Confidence: 0.91 · Status: ACTIVE · Freshness: CURRENT · Tap for evidence ↓</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Knowledge surface model (mobile)</div>
+      <div class="card-body">L0: subject + confidence badge<br>L1: summary + status + freshness<br>L2: metadata (source count, validation)<br>L3: evidence block + provenance (bottom sheet)<br>L4: constitutional detail (bottom sheet)</div>
+    </div>`);
+    setRight(l3DetailHTML());
+  }
+},
+'V-MOBILE-13':{
+  name:'Knowledge Conflict',
+  notes:'Conflict badge on knowledge card. Bottom sheet shows conflicting evidence. Not resolved by fabrication.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-13 — Knowledge conflict. Conflict badge visible. Bottom sheet shows conflict detail without fabricating resolution.</div>
+    <div class="card tap" onclick="showSheet('conflict')" tabindex="0">
+      <div class="card-badges"><span class="b b-knowledge">KNOWLEDGE</span><span style="background:#2a1a0a;color:var(--warning);border:1px solid #f59e0b55" class="b">⚠ CONFLICT</span></div>
+      <div class="card-title">Market share — Tech sector Q3 2026</div>
+      <div class="card-body">Two sources conflict: IDC report (42% share) vs Gartner report (38% share). Confidence: 0.55 — LOW.</div>
+      <div class="card-meta">Conflict detected: 2 sources · Resolution: PENDING · Tap for detail ↓</div>
+    </div>
+    <div class="warn-box"><p>Knowledge conflict is shown — not hidden. Confidence is lowered. Resolution is not fabricated. The conflict exists in the knowledge record and is observable.</p></div>`);
+    setRight('<div class="warn-box"><p>Conflict visible at all viewport sizes. Not hidden on mobile to save space. Evidence is never fabricated to resolve a conflict.</p></div>');
+    setTimeout(()=>showSheet('conflict'),800);
+  }
+},
+'V-MOBILE-14':{
+  name:'Intelligence Decision Chain',
+  notes:'UX-12 decision chain on mobile. Vertical step list. AWAITING_APPROVAL current state. Decision ≠ execution.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-14 — Intelligence decision chain (UX-12). Vertical step list for mobile. AWAITING_APPROVAL — decision is NOT executed.</div>
+    <div class="card">
+      <div class="card-badges"><span class="b b-activity">DECISION</span><span class="ls ls-await">AWAITING APPROVAL</span></div>
+      <div class="card-title">Decision D-442: Reduce equity allocation 8%</div>
+      <div class="gate-chain" style="margin-top:var(--s3)">
+        ${[['OBSERVATION','Market data: 15% sector shift','pass'],['INTERPRETATION','Significant trend identified','pass'],['RECOMMENDATION','Rebalance portfolio','pass'],['PROPOSAL','Reduce equity by 8%','pass'],['DECISION','Awaiting approval','pass'],['ACTION','NOT EXECUTED','fail']].map(([label,detail,cls])=>`<div class="gate-step ${cls==='pass'?'pass':''}"><span class="gate-icon">${cls==='pass'?'✓':'○'}</span><div><div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em">${label}</div><div style="font-size:11px">${detail}</div></div></div>`).join('')}
+      </div>
+    </div>
+    <div class="info-box"><p>AWAITING_APPROVAL ≠ EXECUTED. DECISION is not ACTION. The action will NOT execute without explicit user approval. Decision chain is observability — not execution authority.</p></div>`);
+    setRight('<div class="info-box"><p>INV-MOB-21: Proposal ≠ execution. INV-MOB-20: Approval ≠ execution. INV-MOB-22: Activity ≠ authority. These invariants hold on all viewport sizes.</p></div>');
+  }
+},
+'V-MOBILE-15':{
+  name:'Agent State',
+  notes:'Agent status card on mobile. Capability badge. Activity brief. Authority context. Agent activity ≠ authority.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-15 — Agent state. Agent status visible on mobile. Capability badge. Authority context. Activity ≠ authority.</div>
+    <div class="card">
+      <div class="card-badges"><span class="b b-agent">AGENT</span><span class="ls ls-exec">ACTIVE</span></div>
+      <div class="card-title">apex-agent-fin</div>
+      <div class="card-body">Finance Intelligence Agent · Capability: financial-analysis<br>Current task: T-2847 — Market research (stage 2/4)<br>Authority context: FINANCE domain · A1-IDENTITY confirmed</div>
+      <div class="card-meta">Model: claude-sonnet-4-6 · Cost so far: $0.011 · 23s elapsed</div>
+    </div>
+    <div class="card">
+      <div class="card-badges"><span class="b b-agent">AGENT</span><span class="ls" style="background:#1a1a2a;color:var(--ts);border:1px solid var(--border)">IDLE</span></div>
+      <div class="card-title">apex-agent-brief</div>
+      <div class="card-body">Briefing Agent · Capability: briefing-generation<br>No active task · Queue position: N/A</div>
+    </div>
+    <div class="info-box"><p>Agent activity is observable. Agent authority derives from the constitutional system — not from this activity record. Agent activity ≠ agent authority.</p></div>`);
+    setRight('<div class="info-box"><p>INV-MOB-25: Agent activity ≠ agent authority. The agent status card is an observability surface — it does not grant the agent any capabilities beyond what the constitutional system authorises.</p></div>');
+  }
+},
+'V-MOBILE-16':{
+  name:'Approval — Two-Step Touch',
+  notes:'Two-step approval prevents accidental touch. Tap approve → confirmation dialog. APPROVAL ≠ EXECUTION.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-16 — Approval-required action. Two-step approval prevents accidental touch. Approval ≠ execution. State: AWAITING_APPROVAL.</div>
+    <div class="appr-area">
+      <div class="appr-label">⚠ Approval Required</div>
+      <div class="appr-action">Send email to client@example.com — Q3 financial summary</div>
+      <div class="appr-safety">Risk: MEDIUM · Requested by: apex-agent-comm-01 · Requested: 2 min ago<br><strong>Touch safety:</strong> Two-step confirmation required — prevents accidental approval.</div>
+      <div class="appr-btns">
+        <button class="appr-btn approve" onclick="showApprConfirm()" aria-label="Approve — requires confirmation">Approve</button>
+        <button class="appr-btn decline" onclick="declineAppr()" aria-label="Decline">Decline</button>
+      </div>
+      <div id="apprConfirm">
+        <div class="warn-box" onclick="confirmAppr()" role="button" tabindex="0" style="cursor:pointer" aria-label="Confirm approval">
+          <p>⚠ Confirm: Send email to client@example.com. This action WILL execute after confirmation. Tap to confirm.</p>
+        </div>
+      </div>
+    </div>
+    <div class="info-box"><p>APPROVAL ≠ EXECUTION — tapping Approve shows a confirmation step. Accidental taps on mobile do not cause execution. Constitutional gate applies after approval.</p></div>`);
+    setRight('<div class="info-box"><p>INV-MOB-04: Mobile cannot bypass approval. INV-MOB-10: Touch cannot cause unintended execution. Two-step confirmation enforces this on mobile.</p></div>');
+  }
+},
+'V-MOBILE-17':{
+  name:'Executing Action',
+  notes:'Action EXECUTING state. Progress indicator. EXECUTING ≠ EXECUTED — not complete yet.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-17 — Executing action. EXECUTING state badge. Action is in progress — not yet EXECUTED.</div>
+    <div class="card">
+      <div class="card-badges"><span class="b b-action">ACTION</span><span class="ls ls-exec">EXECUTING</span></div>
+      <div class="card-title">ACT-200: send_slack_message → #apex-alerts</div>
+      <div class="card-body">Approved at 14:23:01 · Executing since 14:23:09<br>Elapsed: 2s · Progress: in flight</div>
+      <div class="card-meta">EXECUTING ≠ EXECUTED. Action is in progress.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Execution chain</div>
+      <div class="gate-chain">
+        ${[['PROPOSED','14:22:50','pass'],['APPROVED','14:23:01','pass'],['EXECUTING','14:23:09','pass'],['EXECUTED','—','']].map(([s,t,c])=>`<div class="gate-step${c?' pass':''}"><span class="gate-icon">${c?'✓':'○'}</span><div><div style="font-size:10px;font-weight:600">${s}</div><div style="font-size:11px">${t}</div></div></div>`).join('')}
+      </div>
+    </div>`);
+    setRight('<div class="info-box"><p>EXECUTING is not EXECUTED. The action is in progress. Execution state transitions are observable. Not fabricated.</p></div>');
+  }
+},
+'V-MOBILE-18':{
+  name:'Blocked Action',
+  notes:'Constitutional gate DENY. BLOCKED state. Cannot proceed without authority change. Not hidden on mobile.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-18 — Blocked action. Constitutional gate DENY. BLOCKED state visible on mobile — not concealed due to screen size.</div>
+    <div class="danger-box"><p>Action BLOCKED — Constitutional gate A4-GOVERNANCE DENY. Action exceeds approved governance scope. Cannot proceed without authority change.</p></div>
+    <div class="card">
+      <div class="card-badges"><span class="b b-const">CONSTITUTIONAL</span><span class="ls ls-blocked">BLOCKED</span></div>
+      <div class="card-title">Task T-2860 — file transfer 5GB vault archive</div>
+      <div class="card-body">Gate: A4-GOVERNANCE · Result: DENY<br>Reason: Action exceeds approved file-transfer scope<br>Recovery: Authority change required — cannot self-escalate</div>
+      <div class="card-meta">Constitutional record: CRID-0048 · Tap for detail →</div>
+    </div>
+    <div class="info-box"><p>BLOCKED state is explicit and visible on all viewport sizes. The constitutional source of truth is the EXECUTIVE_CONSTITUTION.md — this activity record points to it, does not replace it.</p></div>`);
+    setRight('<div class="danger-box"><p>INV-MOB-07: Mobile cannot conceal constitutional boundaries. BLOCKED state is always visible regardless of viewport. Authority derives from constitutional system.</p></div>');
+  }
+},
+'V-MOBILE-19':{
+  name:'Memory Detail',
+  notes:'Memory card with provenance badge, confidence indicator, freshness. Bottom sheet for full detail.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-19 — Memory detail. Memory card with provenance + confidence + freshness. Tap for bottom sheet with full provenance.</div>
+    <div class="card tap" onclick="showSheet('memory')" tabindex="0">
+      <div class="card-badges"><span class="b b-memory">MEMORY</span></div>
+      <div class="card-title">User preference: morning briefings at 07:30</div>
+      <div class="card-body">Confidence: 0.94 · Freshness: CURRENT · Source: voice-session-S-0447</div>
+      <div class="card-meta">Created: 2026-08-28T07:31:00Z · TTL: indefinite · Tap for provenance ↓</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Memory type</div>
+      <div class="card-body">Type: USER_PREFERENCE · Memory ID: mem-8821<br>Memory activity ≠ memory authority. This record describes memory creation — the memory table is authoritative.</div>
+    </div>`);
+    setRight('<div class="info-box"><p>INV-MOB-23: Memory ≠ knowledge. INV-MOB-24: Knowledge ≠ authority. Memory activity is observability — the memory table record is authoritative.</p></div>');
+    setTimeout(()=>showSheet('memory'),800);
+  }
+},
+'V-MOBILE-20':{
+  name:'Constitutional Explanation',
+  notes:'Compact 5-gate constitutional chain on mobile. All gates visible. Source of truth pointer.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-20 — Constitutional explanation on mobile. 5-gate chain in vertical layout. All gates visible. Not concealed due to screen size.</div>
+    <div class="card">
+      <div class="card-badges"><span class="b b-const">CONSTITUTIONAL</span></div>
+      <div class="card-title">Constitutional gate evaluation</div>
+      <div class="card-body" style="margin-bottom:var(--s3)">Action: file_write /vault/memory.md · Result: ALLOW</div>
+      <div class="gate-chain">
+        ${[['A1-IDENTITY','User identity confirmed','pass'],['A2-CONSENT','Consent active','pass'],['A3-OWNERSHIP','Owner: user — vault write permitted','pass'],['A4-GOVERNANCE','Memory domain — standard governance','pass'],['A5-SAFETY','No safety constraint violated','pass']].map(([g,d])=>`<div class="gate-step pass"><span class="gate-icon">✓</span><div><div style="font-size:10px;font-weight:600">${g}</div><div style="font-size:11px">${d}</div></div></div>`).join('')}
+      </div>
+      <div class="card-meta">Constitutional record: CRID-0041 · Source: EXECUTIVE_CONSTITUTION.md</div>
+    </div>
+    <div class="info-box"><p>Constitutional activity is observability — it does not itself authorise. Source of truth: EXECUTIVE_CONSTITUTION.md and the constitutional store.</p></div>`);
+    setRight(l4DetailHTML());
+  }
+},
+'V-MOBILE-21':{
+  name:'Activity Stream',
+  notes:'Activity stream on mobile. Category pills. Event cards. Stale marking. Bottom sheet for detail.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-21 — Activity stream on mobile. Category pills scroll horizontally. Tap event card for bottom sheet detail.</div>
+    <div class="dom-row" role="group" aria-label="Category filter">
+      ${['All','Agent','Tool','Voice','Memory','Constitutional','Error'].map((c,i)=>`<button class="dom-pill${i===0?' active':''}" onclick="toggleDom(this)">${c}</button>`).join('')}
+    </div>
+    ${['AGENT|COMPLETED|Task T-2822 completed — financial summary|apex-agent-fin|14:21:00',
+       'TOOL|COMPLETED|web_search — 5 results|apex-agent-fin|14:20:45',
+       'VOICE|COMPLETED|Voice session — briefing delivered|user|14:20:00',
+       'ERROR|FAILED|Task T-2901 — rate limit exceeded|apex-agent-res|14:15:00'].map(row=>{
+      const [cat,state,desc,actor,time]=row.split('|');
+      return `<div class="ev-card tap" onclick="showSheet('l3')" tabindex="0"><div class="ev-card-top"><div class="card-badges"><span class="b b-${cat.toLowerCase()}">${cat}</span><span class="ls ${state==='COMPLETED'?'ls-done':'ls-failed'}">${state}</span></div><span class="ev-time">${time}</span></div><div class="ev-desc">${desc}</div><div class="ev-meta">👤 ${actor}</div></div>`;
+    }).join('')}`);
+    setRight('<div class="info-box"><p>Activity stream on mobile. Same event model as desktop (UX-17). Category filtering is presentation-only — does not alter event records.</p></div>');
+  }
+},
+'V-MOBILE-22':{
+  name:'Connection — Degraded',
+  notes:'Connection state DEGRADED. Amber banner. Events marked stale after 30s threshold. Not presented as live.',
+  conn:'degraded',
+  render(){
+    setConnState('degraded');
+    setContent(`<div class="sc-note">📱 V-MOBILE-22 — Degraded connection. Amber banner below header. Events marked ⚠ STALE. Not presented as live.</div>
+    <div class="warn-box"><p>⚠ WebSocket connected but high latency (>2s). Events may be delayed. Stale threshold: 30s.</p></div>
+    <div class="ev-card"><div class="ev-card-top"><div class="card-badges"><span class="b b-agent">AGENT</span><span class="ls ls-done">COMPLETED</span></div><span class="ev-time">14:18:00 <span class="stale-tag">⚠ STALE</span></span></div><div class="ev-desc">Task T-2815 completed (stale — 35s ago)</div><div class="ev-meta">👤 apex-agent-01</div></div>
+    <div class="info-box"><p>DEGRADED state is visible at all viewport sizes. Stale data is marked — not hidden, not presented as live. INV-MOB-28: Stale data is marked stale on all viewports.</p></div>`);
+    setRight('<div class="warn-box"><p>Connection: DEGRADED. Amber indicator in header. Banner below header on mobile. Same connection state model as desktop (UX-17).</p></div>');
+  }
+},
+'V-MOBILE-23':{
+  name:'Connection — Disconnected',
+  notes:'WebSocket disconnected. Red banner. Retry button. Historical data shown but marked. Offline state explicit.',
+  conn:'disconnected',
+  render(){
+    setConnState('disconnected');
+    setContent(`<div class="sc-note">📱 V-MOBILE-23 — Disconnected state. Red banner with retry button. Last known state shown. Explicit offline indicator.</div>
+    <div class="danger-box"><p>✕ WebSocket disconnected. No live events. Showing cached data — may be stale.</p></div>
+    <div class="ev-card"><div class="ev-card-top"><div class="card-badges"><span class="b b-agent">AGENT</span></div><span class="ev-time">14:10:00 <span class="stale-tag">⚠ STALE</span></span></div><div class="ev-desc">Last known event (disconnected 8 min ago)</div><div class="ev-meta">Cached data — not live</div></div>
+    <div class="info-box"><p>DISCONNECTED state is explicit and visible. Historical data shown but clearly marked as stale. Retry button (44px minimum target) available in banner. INV-MOB-29: Disconnected state visible on all viewports.</p></div>`);
+    setRight('<div class="danger-box"><p>Connection: DISCONNECTED. Red indicator. Banner with Retry. Data: STALE. No fabrication of live state.</p></div>');
+  }
+},
+'V-MOBILE-24':{
+  name:'Responsive Transition',
+  notes:'Same content at mobile vs tablet vs desktop. ONE APEX — layout changes, semantics do not.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-24 — Responsive transition. Switch between Mobile/Tablet/Desktop using the simulator above. Same content — different layout. ONE APEX.</div>
+    <div class="info-box"><p>Use the viewport selector (top of prototype) to switch between Mobile / Tablet / Desktop. Observe: bottom nav appears/disappears; side nav shows/hides; right panel appears on tablet+; bottom sheet replaced by right panel.</p></div>
+    <div class="card"><div class="card-title">Layout transformation summary</div><div class="card-body">
+      Mobile (&lt;640px): bottom tab bar + hamburger drawer + bottom sheet<br>
+      Tablet (640–1023px): persistent side nav (240px) + right panel (280px) + no bottom nav<br>
+      Desktop (1024px+): side nav (260px) + right panel (320px) + wide content<br><br>
+      Semantics preserved: evidence, governance, disclosure, invariants — unchanged.
+    </div></div>
+    <div class="card"><div class="card-badges"><span class="b b-agent">AGENT</span><span class="ls ls-done">COMPLETED</span></div><div class="card-title">Task T-2847 — visible on all viewports</div><div class="card-body">Same event. Same state. Same evidence. Different layout.</div></div>`);
+    setRight('<div class="info-box"><p>INV-MOB-12: Desktop and mobile remain ONE APEX. INV-MOB-09: Responsive transformation preserves semantic meaning.</p></div><div class="card"><div class="card-title">Right panel (tablet/desktop only)</div><div class="card-body">This panel is visible because you are in tablet or desktop viewport. On mobile, this content appears in the bottom sheet.</div></div>');
+  }
+},
+'V-MOBILE-25':{
+  name:'Landscape Mode',
+  notes:'Compact header (40px) and nav (48px) in landscape. Side-by-side layout where space permits.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-25 — Landscape mode. Header reduces to 40px. Bottom nav reduces to 48px. Voice overlay adapts to horizontal layout. Resize your browser to a short, wide viewport to see landscape CSS.</div>
+    <div class="info-box"><p>Landscape breakpoint: max-height 500px AND max-width 1024px. CSS: @media(max-height:500px) and (max-width:1024px). Voice overlay switches to row direction. Orb reduces to 64px. Header reduces to 40px.</p></div>
+    <div class="card"><div class="card-title">Landscape adaptations</div><div class="card-body">
+      Header: 40px (from 48px)<br>
+      Bottom nav: 48px (from 56px)<br>
+      Voice overlay: flex-direction row<br>
+      Voice orb: 64px (from 96px)<br>
+      Content: full-width, horizontal scroll where needed
+    </div></div>
+    <div class="card"><div class="card-title">Invariant</div><div class="card-body">Landscape mode changes layout — not authority, governance, disclosure, or constitutional state. L3/L4 remain accessible via bottom sheet or panel.</div></div>`);
+    setRight('<div class="info-box"><p>Landscape invariant: all content accessible. Progressive disclosure not removed. Evidence not removed. Constitutional state not concealed.</p></div>');
+  }
+},
+'V-MOBILE-26':{
+  name:'Accessibility / Reduced Motion',
+  notes:'prefers-reduced-motion disables all animations. Touch targets 44px. Screen reader semantics. Focus management.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-26 — Accessibility and reduced motion. All interactive elements: min 44×44px. prefers-reduced-motion disables all animations. ARIA live regions for dynamic content.</div>
+    <div class="success-box"><p>✓ Touch targets: all interactive elements ≥ 44×44px (WCAG 2.5.5)<br>✓ Spacing: ≥ 8px between touch targets<br>✓ Reduced motion: @media(prefers-reduced-motion:reduce) disables ALL animations<br>✓ Screen reader: role="application", role="dialog", aria-live, aria-label on all elements<br>✓ Focus management: focus returns to trigger on sheet close<br>✓ Non-colour state: text + icon + colour (never colour-only)<br>✓ Text scaling: layout adapts at 200% zoom without horizontal scroll<br>✓ Keyboard navigation: all elements reachable via Tab / Enter / Space</p></div>
+    <div class="card"><div class="card-title">Live regions</div><div class="card-body">Connection status: aria-live="assertive" · Activity stream: aria-live="polite" · Voice state: aria-live="assertive" · Notification banners: aria-live="assertive"</div></div>`);
+    setRight('<div class="info-box"><p>Accessibility invariant: responsiveness does not reduce accessibility. Mobile viewport gets the same ARIA semantics and focus model as desktop.</p></div>');
+  }
+},
+'V-MOBILE-27':{
+  name:'Touch Interaction',
+  notes:'Touch model: swipe right = back/open drawer. Domain pill horizontal scroll. Approval two-step. Long-press = contextual.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-27 — Touch interaction model. Domain pills scroll horizontally. Swipe simulation noted. Two-step approval demonstrated.</div>
+    <div class="dom-row" role="group" aria-label="Horizontal scroll example">
+      ${['Finance','Business','Education','Health','Operations','System','Knowledge','Intelligence'].map((d,i)=>`<button class="dom-pill${i===0?' active':''}" onclick="toggleDom(this)">${d}</button>`).join('')}
+    </div>
+    <div class="info-box"><p>Touch model:<br>• Swipe right → open nav drawer<br>• Swipe down on sheet → dismiss<br>• Horizontal swipe → scroll pill rows<br>• Long-press → contextual options (no destructive default)<br>• Approval: two-step (tap → confirm)</p></div>
+    <div class="card"><div class="card-title">Touch safety invariants</div><div class="card-body">• Touch CANNOT bypass approval (INV-MOB-04)<br>• Touch CANNOT bypass governance (INV-MOB-03)<br>• Touch CANNOT cause unintended execution (INV-MOB-10)<br>• Destructive actions require explicit confirmation</div></div>`);
+    setRight('<div class="info-box"><p>Touch model invariant: gestures and touch interactions operate under the same constitutional model as keyboard/mouse interactions. No mobile shortcut bypasses governance.</p></div>');
+  }
+},
+'V-MOBILE-28':{
+  name:'Long Content / Overflow',
+  notes:'Long content scrolls vertically within bottom sheet. No horizontal overflow. Content not truncated.',
+  conn:'live',
+  render(){
+    const longContent = Array(8).fill(0).map((_,i)=>`<div class="dr"><span class="dk">field_${i+1}</span><span class="dv">value_${i+1}_with_longer_text</span></div>`).join('');
+    setContent(`<div class="sc-note">📱 V-MOBILE-28 — Long content / overflow. Bottom sheet scrolls vertically. No horizontal overflow. Evidence never truncated.</div>
+    <div class="card tap" onclick="showSheet('long')" tabindex="0">
+      <div class="card-badges"><span class="b b-knowledge">KNOWLEDGE</span></div>
+      <div class="card-title">Long content example — tap for scrollable bottom sheet</div>
+      <div class="card-body">8 evidence fields + provenance chain. Scrolls vertically inside bottom sheet.</div>
+    </div>
+    <div class="info-box"><p>Content overflow: vertical scroll only. -webkit-overflow-scrolling:touch for smooth scrolling. No horizontal overflow introduced by mobile layout. Evidence never truncated — only relocated to a scrollable surface.</p></div>`);
+    setRight('<div class="info-box"><p>Long content test: evidence and provenance fields are fully accessible on mobile via scrollable bottom sheet. No content is silently removed.</p></div>');
+    setTimeout(()=>{
+      document.getElementById('sheetTitle').textContent='Evidence Detail (scrollable)';
+      document.getElementById('sheetBody').innerHTML=`<div class="ev-block">${longContent}</div><div class="ev-block"><div class="ev-row"><span class="ek">provenance:</span><span>apex-agent-res</span></div><div class="ev-row"><span class="ek">captured_at:</span><span>2026-08-28T14:20:00Z</span></div><div class="ev-row"><span class="ek">trace_id:</span><span>NOT AVAILABLE</span></div><div class="ev-row"><span class="ek">confidence:</span><span>0.89</span></div></div><div class="pvbox"><div class="pvi">⊘</div><div class="pvt">Privacy Boundary</div><p>Internal reasoning not exposed. Provenance records what was observed, not how it was reasoned about.</p></div>`;
+      openSheet('Evidence Detail (scrollable)','');
+    },800);
+  }
+},
+'V-MOBILE-29':{
+  name:'L4 Constitutional Disclosure',
+  notes:'L4 on mobile: full-height bottom sheet with 5-gate chain + governance + execution + privacy boundary. Always accessible.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📱 V-MOBILE-29 — L4 constitutional disclosure on mobile. Full-height bottom sheet. 5-gate chain. Privacy boundary. L4 is ALWAYS accessible on mobile — never removed.</div>
+    <div class="card tap" onclick="showSheet('l4')" tabindex="0">
+      <div class="card-badges"><span class="b b-const">CONSTITUTIONAL</span></div>
+      <div class="card-title">Task T-2847 — L4 constitutional detail</div>
+      <div class="card-body">Tap to view full L4 disclosure: constitutional gate + governance + execution chain + privacy boundary.</div>
+    </div>
+    <div class="info-box"><p>INV-MOB-30: L3 and L4 disclosure remain accessible on mobile — never removed due to viewport constraints. On mobile, L4 content appears in a full-height bottom sheet.</p></div>`);
+    setRight(l4DetailHTML());
+    setTimeout(()=>showSheet('l4'),800);
+  }
+},
+'V-MOBILE-30':{
+  name:'Tablet Layout',
+  notes:'Persistent side nav + right detail panel simultaneously visible. Same content — different layout.',
+  conn:'live',
+  render(){
+    setContent(`<div class="sc-note">📟 V-MOBILE-30 — Tablet layout. Switch to Tablet viewport above. Persistent side nav (240px) + right panel (280px) visible simultaneously. No bottom nav. No hamburger.</div>
+    <div class="info-box"><p>Switch to Tablet viewport using the simulator above to see the tablet layout. On tablet (640–1023px): side nav is persistent, right panel shows detail, bottom nav is hidden, hamburger menu is hidden.</p></div>
+    <div class="card"><div class="card-badges"><span class="b b-agent">AGENT</span><span class="ls ls-exec">IN PROGRESS</span></div><div class="card-title">Task T-2847: Research market opportunity</div><div class="card-body">Agent apex-agent-01 — stage 2/4 — 23s elapsed. On tablet, detail visible in right panel simultaneously with this stream.</div></div>
+    <div class="card"><div class="card-badges"><span class="b b-knowledge">KNOWLEDGE</span><span class="ls ls-done">COMPLETED</span></div><div class="card-title">Q3 Financial Report — validated</div><div class="card-body">3 evidence items · Confidence: 0.91 · ACTIVE</div></div>`);
+    setRight('<div class="card"><div class="card-title">Tablet right panel</div><div class="card-body">This right panel is visible because you are in tablet or desktop viewport. Same content as bottom sheet on mobile — no content removed.</div></div>'+l3DetailHTML());
+    if(currentVP!=='tablet'&&currentVP!=='desktop') setVP('tablet');
+  }
+},
+};
+
+// ─── SHEET CONTENT ────────────────────────────────────────────────────────────
+function l3DetailHTML(){
+  return `<div class="ev-block"><div class="ev-row"><span class="ek">source:</span><span>apex_timeline</span></div><div class="ev-row"><span class="ek">evidence_id:</span><span>EVD-0051</span></div><div class="ev-row"><span class="ek">confidence:</span><span>0.91</span></div><div class="ev-row"><span class="ek">chunk_id:</span><span>doc-7821-p7</span></div></div><div class="ev-block"><div class="ev-row"><span class="ek">origin:</span><span>apex-agent-res</span></div><div class="ev-row"><span class="ek">captured_at:</span><span>2026-08-28T14:20:00Z</span></div><div class="ev-row"><span class="ek">trace_id:</span><span>NOT AVAILABLE</span></div></div>`;
+}
+function l4DetailHTML(){
+  return `<div class="gate-chain">${[['A1-IDENTITY','Owner confirmed','pass'],['A2-CONSENT','Consent active','pass'],['A3-OWNERSHIP','Vault write permitted','pass'],['A4-GOVERNANCE','Memory domain — pass','pass'],['A5-SAFETY','No safety violation','pass']].map(([g,d])=>`<div class="gate-step pass"><span class="gate-icon">✓</span><div><div style="font-size:10px;font-weight:600">${g}</div><div style="font-size:11px">${d}</div></div></div>`).join('')}</div><div class="pvbox"><div class="pvi">⊘</div><div class="pvt">Privacy Boundary</div><p>Constitutional: 5/5 gates PASS. Execution: EXECUTED. Chain-of-thought: PROTECTED — NOT EXPOSED at any viewport or disclosure level.</p></div>`;
+}
+
+const SHEET_CONTENT = {
+  task:`<div class="dr"><span class="dk">task_id</span><span class="dv">T-2847</span></div><div class="dr"><span class="dk">objective</span><span class="dv">Research market opportunity</span></div><div class="dr"><span class="dk">state</span><span class="dv">IN_PROGRESS</span></div><div class="dr"><span class="dk">stage</span><span class="dv">2/4</span></div><div class="dr"><span class="dk">elapsed</span><span class="dv">23s</span></div><div class="dr"><span class="dk">actor</span><span class="dv">apex-agent-01</span></div>`,
+  notif:`<div class="dr"><span class="dk">type</span><span class="dv">SYSTEM_ALERT</span></div><div class="dr"><span class="dk">title</span><span class="dv">Pipeline T-2822 complete</span></div><div class="dr"><span class="dk">read</span><span class="dv">false</span></div><div class="dr"><span class="dk">dedup</span><span class="dv">60s window</span></div>`,
+  l3:`<div style="font-size:11px;font-weight:600;color:var(--tm);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">L3 — Evidence + Provenance</div>${l3DetailHTML()}<div class="dr"><span class="dk">related</span><span class="dv">Task T-2847 · Notification N-0092</span></div><div class="dr"><span class="dk">correlation</span><span class="dv">NOT AVAILABLE</span></div>`,
+  l4:`<div style="font-size:11px;font-weight:600;color:var(--tm);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">L4 — Constitutional + Governance</div>${l4DetailHTML()}`,
+  memory:`<div style="font-size:11px;font-weight:600;color:var(--tm);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Memory Provenance</div><div class="ev-block"><div class="ev-row"><span class="ek">memory_id:</span><span>mem-8821</span></div><div class="ev-row"><span class="ek">origin:</span><span>voice-session-S-0447</span></div><div class="ev-row"><span class="ek">processed_by:</span><span>intent-classifier-v2</span></div><div class="ev-row"><span class="ek">confidence:</span><span>0.94</span></div><div class="ev-row"><span class="ek">freshness:</span><span>CURRENT</span></div><div class="ev-row"><span class="ek">TTL:</span><span>indefinite</span></div></div><div class="info-box"><p>Memory activity ≠ memory authority. This provenance record describes creation — the memory table record is authoritative.</p></div>`,
+  conflict:`<div style="font-size:11px;font-weight:600;color:var(--tm);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Knowledge Conflict Detail</div><div class="warn-box"><p>Source A (IDC): 42% market share · Confidence: 0.82<br>Source B (Gartner): 38% market share · Confidence: 0.79<br>Resolution: PENDING · Combined confidence: 0.55 (LOW)</p></div><div class="info-box"><p>Conflict is NOT resolved by fabrication. Resolution requires additional evidence or explicit user input. Confidence lowered to reflect uncertainty.</p></div>`,
+};
+
+// ─── RENDER ENGINE ────────────────────────────────────────────────────────────
+function setContent(html){document.getElementById('content').innerHTML=html}
+function setRight(html){document.getElementById('rightContent').innerHTML=html}
+
+function openSheet(title, key){
+  document.getElementById('sheetTitle').textContent=title;
+  document.getElementById('sheetBody').innerHTML=key?SHEET_CONTENT[key]||'':document.getElementById('sheetBody').innerHTML;
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheet').setAttribute('aria-hidden','false');
+}
+function showSheet(key){
+  const titles={task:'Task Detail',notif:'Notification',l3:'L3 — Evidence',l4:'L4 — Constitutional',memory:'Memory Provenance',conflict:'Knowledge Conflict',long:'Evidence Detail'};
+  openSheet(titles[key]||'Detail', key);
+}
+function closeSheet(){
+  document.getElementById('sheet').classList.remove('open');
+  document.getElementById('sheet').setAttribute('aria-hidden','true');
+}
+
+// ─── CONNECTION STATE ─────────────────────────────────────────────────────────
+function setConnState(state){
+  connState=state;
+  const dot=document.getElementById('connDot');
+  const banner=document.getElementById('connBanner');
+  const btext=document.getElementById('connBannerText');
+  const bbtn=document.getElementById('connBannerBtn');
+  dot.className='conn-sm';
+  banner.className='';
+  if(state==='live'){dot.title='Connection: LIVE';dot.setAttribute('aria-label','Connection: live');}
+  else if(state==='degraded'){dot.classList.add('warn');banner.classList.add('degraded');btext.textContent='⚠ Degraded — events may be delayed';bbtn.textContent='Status';dot.setAttribute('aria-label','Connection: degraded');}
+  else if(state==='disconnected'){dot.classList.add('err');banner.classList.add('disconnected');btext.textContent='✕ Disconnected — no live events';bbtn.textContent='Retry';dot.setAttribute('aria-label','Connection: disconnected');}
+  else if(state==='reconnecting'){dot.classList.add('warn','pulse');banner.classList.add('reconnecting');btext.textContent='↻ Reconnecting (attempt 2/5)…';bbtn.textContent='Cancel';dot.setAttribute('aria-label','Connection: reconnecting');}
+}
+function simulateReconnect(){setConnState('reconnecting');setTimeout(()=>setConnState('live'),3000);}
+
+// ─── VOICE ────────────────────────────────────────────────────────────────────
+const VOICE_STEPS=[
+  {state:'ACTIVATING',orb:'',icon:'🎙',transcript:'',privacy:false,barge:false},
+  {state:'LISTENING',orb:'listening',icon:'🎙',transcript:'Listening…',privacy:false,barge:false},
+  {state:'UNDERSTANDING',orb:'',icon:'💬',transcript:'Morning briefing, please',privacy:false,barge:false},
+  {state:'THINKING',orb:'thinking',icon:'◎',transcript:'',privacy:true,barge:false},
+  {state:'SPEAKING',orb:'speaking',icon:'🔊',transcript:'Good morning. Here is your briefing…',privacy:false,barge:true},
+  {state:'COMPLETED',orb:'',icon:'✓',transcript:'Session complete',privacy:false,barge:false},
+];
+const VOICE_FAILED_STEPS=[
+  {state:'ACTIVATING',orb:'',icon:'🎙',transcript:'',privacy:false,barge:false},
+  {state:'FAILED',orb:'failed',icon:'✕',transcript:'Microphone permission denied',privacy:false,barge:false},
+];
+
+function startVoice(mode){
+  const fab=document.getElementById('voiceFab');
+  const overlay=document.getElementById('voiceOverlay');
+  fab.classList.add(mode==='failed'?'':'listening');
+  overlay.classList.add('on');
+  overlay.setAttribute('aria-hidden','false');
+  fab.setAttribute('aria-pressed','true');
+  const steps=mode==='failed'?VOICE_FAILED_STEPS:mode==='thinking'?VOICE_STEPS.slice(0,4):mode==='speaking'?VOICE_STEPS.slice(0,5):VOICE_STEPS;
+  let i=0;
+  function doStep(){
+    if(i>=steps.length) return;
+    const s=steps[i++];
+    document.getElementById('voiceState').textContent=s.state;
+    document.getElementById('voiceOrb').className='orb'+(s.orb?' '+s.orb:'');
+    document.getElementById('voiceOrb').textContent=s.icon;
+    document.getElementById('voiceTranscript').textContent=s.transcript;
+    document.getElementById('voicePrivacy').style.display=s.privacy?'block':'none';
+    document.getElementById('voiceWave').style.display=(s.state==='LISTENING'||s.state==='SPEAKING')?'flex':'none';
+    const bargeBtn=document.getElementById('bargeInBtn');
+    if(bargeBtn) bargeBtn.style.display=s.barge?'inline-flex':'none';
+    if(s.state!=='COMPLETED'&&s.state!=='FAILED') voiceTimer=setTimeout(doStep,1800);
+  }
+  doStep();
+}
+function toggleVoice(){
+  const overlay=document.getElementById('voiceOverlay');
+  if(overlay.classList.contains('on')){cancelVoice();}else{startVoice('listening');}
+}
+function cancelVoice(){
+  clearTimeout(voiceTimer);
+  const overlay=document.getElementById('voiceOverlay');
+  overlay.classList.remove('on');
+  overlay.setAttribute('aria-hidden','true');
+  const fab=document.getElementById('voiceFab');
+  fab.className='';
+  fab.id='voiceFab';
+  fab.setAttribute('aria-pressed','false');
+  document.getElementById('voiceState').textContent='IDLE';
+  document.getElementById('voiceWave').style.display='none';
+  document.getElementById('voicePrivacy').style.display='none';
+}
+function bargeIn(){
+  document.getElementById('voiceState').textContent='INTERRUPTED';
+  document.getElementById('voiceTranscript').textContent='Session interrupted by user';
+  setTimeout(cancelVoice,1000);
+}
+
+// ─── NAV ─────────────────────────────────────────────────────────────────────
+function toggleNav(){
+  const nav=document.getElementById('sideNav');
+  const overlay=document.getElementById('navOverlay');
+  const btn=document.getElementById('menuBtn');
+  const open=nav.classList.toggle('open');
+  overlay.classList.toggle('on',open);
+  nav.setAttribute('aria-hidden',!open);
+  btn.setAttribute('aria-expanded',open);
+}
+function closeNav(){
+  document.getElementById('sideNav').classList.remove('open');
+  document.getElementById('navOverlay').classList.remove('on');
+  document.getElementById('sideNav').setAttribute('aria-hidden','true');
+  document.getElementById('menuBtn').setAttribute('aria-expanded','false');
+}
+function setNavActive(el){document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));el.classList.add('active');}
+function setBnavActive(el){document.querySelectorAll('.bn-item').forEach(n=>n.classList.remove('active'));el.classList.add('active');}
+function toggleDom(el){document.querySelectorAll('.dom-pill').forEach(p=>p.classList.remove('active'));el.classList.add('active');}
+
+// ─── VIEWPORT SIMULATOR ───────────────────────────────────────────────────────
+function setVP(vp){
+  currentVP=vp;
+  const wrap=document.getElementById('outerWrap');
+  wrap.className=['vp-mobile','vp-tablet','vp-desktop'].map(c=>c).join(' ');
+  wrap.className='vp-'+vp;
+  ['m','t','d'].forEach((id,i)=>{
+    const btn=document.getElementById('vp-'+id);
+    const v=['mobile','tablet','desktop'][i];
+    btn.classList.toggle('active',v===vp);
+    btn.setAttribute('aria-pressed',v===vp);
+  });
+  const sizes={mobile:'390 × mobile portrait',tablet:'834 × tablet',desktop:'1440 × desktop'};
+  document.getElementById('simInfo').textContent=sizes[vp];
+  closeSheet();
+  closeNav();
+}
+
+// ─── APPROVAL ────────────────────────────────────────────────────────────────
+function showApprConfirm(){document.getElementById('apprConfirm').style.display='block';}
+function confirmAppr(){document.getElementById('apprConfirm').innerHTML='<div class="success-box"><p>✓ Approved — action will execute after constitutional gate check.</p></div>';}
+function declineAppr(){document.getElementById('apprConfirm').style.display='none';document.querySelector('.appr-area').innerHTML='<div class="success-box"><p>Action declined. NOT EXECUTED.</p></div>';}
+
+// ─── LOAD SCENARIO ────────────────────────────────────────────────────────────
+function loadScenario(id){
+  currentScenario=id;
+  cancelVoice();closeSheet();closeNav();
+  setConnState('live');
+  const s=SCENARIOS[id];
+  if(!s) return;
+  document.getElementById('scenarioSelect').value=id;
+  if(s.conn&&s.conn!=='live') setConnState(s.conn);
+  s.render();
+  document.querySelectorAll('.scenario-btn').forEach(b=>{b.classList.toggle('active',b.dataset.id===id);});
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+const sel=document.getElementById('scenarioSelect');
+Object.entries(SCENARIOS).forEach(([id,s],i)=>{
+  const opt=document.createElement('option');
+  opt.value=id;opt.textContent=`${String(i+1).padStart(2,'0')}. ${s.name}`;
+  sel.appendChild(opt);
+});
+loadScenario('V-MOBILE-01');
+</script>
+</body>
+</html>

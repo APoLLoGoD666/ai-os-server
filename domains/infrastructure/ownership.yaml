@@ -1,0 +1,28 @@
+domain: Infrastructure
+domain_id: DOM-000005
+capability: compute-substrate
+runtime: server.js
+criticality: CRITICAL
+owner: System Agent
+
+entity_id: DOM-000005
+
+dependencies: []   # Infrastructure is the substrate — it has no upstream dependencies
+
+consumers:
+  - DOM-000001
+  - DOM-000002
+  - DOM-000003
+  - DOM-000004
+  - DOM-000006
+  - DOM-000007
+  - DOM-000008
+  - DOM-000009
+  - DOM-000010
+
+events_emitted:
+  - ENTITY_UPDATED
+
+events_consumed:
+  - GOVERNANCE_VIOLATION
+  - FITNESS_CHECK_FAILED

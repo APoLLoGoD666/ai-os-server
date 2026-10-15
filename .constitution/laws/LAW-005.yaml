@@ -1,0 +1,14 @@
+id: LAW-005
+name: Domain Boundary Sovereignty
+description: >
+  No domain may depend on another domain's internal implementation details.
+  Dependencies must be declared via ownership.yaml and mediated through
+  Registry query intents or published events. Direct cross-domain require()
+  calls to internal modules are violations.
+category: architecture
+enforcement: advisory
+condition:
+  operation: cross_domain_dependency
+  allowed_interfaces: [Registry.query, EventBus, ownership.yaml]
+remedy: Refactor the cross-domain access to use Registry.query() or EventBus.
+severity: HIGH

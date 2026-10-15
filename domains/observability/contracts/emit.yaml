@@ -1,0 +1,45 @@
+domain: DOM-000006
+events:
+  - name: DOMAIN_HEALTH_CHANGED
+    description: A domain's health score has crossed a significant threshold.
+    schema:
+      domain_id: string
+      domain_name: string
+      previous_score: number
+      current_score: number
+      label: string
+      trend: string
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 200
+    consumers:
+      - DOM-000001   # Civilisation
+      - DOM-000002   # Intelligence adapts behavior
+      - DOM-000007   # Interface updates health display
+
+  - name: FITNESS_CHECK_FAILED
+    description: One or more architectural fitness checks are failing.
+    schema:
+      fail: number
+      total: number
+      checks: array
+      timestamp: number
+    guaranteed_delivery: true
+    max_latency_ms: 100
+    consumers:
+      - DOM-000005   # Infrastructure ops
+      - DOM-000009   # Development must fix
+
+  - name: TEMPORAL_ANOMALY_DETECTED
+    description: An entity's health score is a statistical outlier.
+    schema:
+      entity_id: string
+      entity_name: string
+      score: number
+      mean: number
+      sigma: number
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 300
+    consumers:
+      - DOM-000009   # Development investigates

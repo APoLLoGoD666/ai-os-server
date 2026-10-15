@@ -1,0 +1,34 @@
+id: DOM-000002
+name: Intelligence
+criticality: CRITICAL
+autonomy_level: 1
+
+description: >
+  AI reasoning, agent orchestration, Claude API integration,
+  cognitive evaluation. Provides the civilisation's ability to think.
+
+invariants:
+  - property: status
+    must_be: ACTIVE
+    violation: critical
+
+  - property: owner
+    must_be_set: true
+    violation: advisory
+
+  - property: health_score
+    minimum: 50
+    consecutive_readings: 3
+    violation: quarantine
+
+vital_connections:
+  - DOM-000003   # Registry — for entity context
+  - DOM-000004   # Memory — for knowledge retrieval
+
+ancestors:
+  - DOM-000001   # Must be reachable from civilisation root
+
+healing_domain: DOM-000005
+
+clock_baseline_ticks_per_hour: 20
+prediction_accuracy_target: 0.80

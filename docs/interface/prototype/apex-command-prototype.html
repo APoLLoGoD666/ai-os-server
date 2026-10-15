@@ -1,0 +1,1788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>APEX — Command Centre Prototype (UX-06)</title>
+  <meta name="description" content="UX-06 Command Centre Visual Prototype — canonical APEX design system" />
+  <!-- Canonical 3-font stack per UX-05 Section 10. IBM Plex Sans + Space Grotesk RETIRED. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ═══════════════════════════════════════════════════════════════════
+       UX-06 COMMAND CENTRE VISUAL PROTOTYPE
+       Authority: UX-05 Canonical Visual Design System (2026-08-27)
+       Evidence: INHERITED unless marked PROPOSED or OPEN
+    ═══════════════════════════════════════════════════════════════════ */
+
+    /* ── 1. CANONICAL TOKEN SYSTEM (UX-05 §8–§13) ──────────────────── */
+    /* ONE root block. No competing blocks. UX-05 INV-VS-02.            */
+    :root {
+      /* Core colour */
+      --apex-color-bg:          #03060f;
+      --apex-color-bg-2:        #060c18;
+      --apex-color-surface-1:   rgba(255,255,255,0.04);
+      --apex-color-surface-2:   rgba(0,212,255,0.05);
+      --apex-color-surface-3:   rgba(3,6,15,0.92);
+      --apex-color-surface-4:   rgba(5,10,26,0.97);
+      --apex-color-primary:     #00d4ff;
+      --apex-color-primary-dim: rgba(0,212,255,0.18);
+      --apex-color-primary-glow:rgba(0,212,255,0.40);
+      --apex-color-secondary:   #0066ff;
+      --apex-color-accent:      #7b2fff;
+      --apex-color-border:      rgba(0,212,255,0.16);
+      --apex-color-border-dim:  rgba(0,212,255,0.08);
+      /* Text */
+      --apex-color-text-primary:   #e8f4ff;
+      --apex-color-text-secondary: rgba(232,244,255,0.70);
+      --apex-color-text-muted:     rgba(232,244,255,0.45);
+      --apex-color-text-dim:       rgba(232,244,255,0.25);
+      /* Semantic */
+      --apex-color-success:     #27ae60;
+      --apex-color-success-dim: rgba(39,174,96,0.15);
+      --apex-color-warning:     #ff9f43;
+      --apex-color-warning-dim: rgba(255,159,67,0.12);
+      --apex-color-danger:      #ff4d6d;
+      --apex-color-danger-dim:  rgba(255,77,109,0.15);
+      /* Domain colours (UX-05 §9.3) */
+      --apex-color-domain-finance:       #3fd29a;
+      --apex-color-domain-health:        #4fb8e0;
+      --apex-color-domain-business:      #efb45a;
+      --apex-color-domain-communication: #a78bfa;
+      --apex-color-domain-operations:    #60a5fa;
+      --apex-color-domain-learning:      #7c6fff;
+      --apex-color-domain-system:        #5b9eff;
+      /* Spacing (UX-05 §11) */
+      --apex-space-2:  4px;
+      --apex-space-3:  6px;
+      --apex-space-4:  8px;
+      --apex-space-5:  10px;
+      --apex-space-6:  12px;
+      --apex-space-7:  14px;
+      --apex-space-8:  16px;
+      --apex-space-10: 20px;
+      --apex-space-12: 24px;
+      /* Radius (UX-05 §12) */
+      --apex-radius-xs:     3px;
+      --apex-radius-sm:     4px;
+      --apex-radius-md:     6px;
+      --apex-radius-lg:     8px;
+      --apex-radius-xl:     10px;
+      --apex-radius-2xl:    12px;
+      --apex-radius-3xl:    14px;
+      --apex-radius-pill:   9999px;
+      --apex-radius-circle: 50%;
+      /* Borders */
+      --apex-border-standard:      1px;
+      --apex-border-active:        3px;
+      --apex-border-active-mobile: 2px;
+      --apex-border-orb:           1.5px;
+      /* Duration (UX-05 §15.2) */
+      --apex-duration-micro:      120ms;
+      --apex-duration-standard:   220ms;
+      --apex-duration-deliberate: 350ms;
+      /* Shadows */
+      --apex-shadow-glow-primary: 0 0 22px rgba(0,212,255,0.18);
+      --apex-shadow-modal:        0 20px 60px rgba(0,0,0,0.60);
+      /* Z-index (UX-05 §13.4) */
+      --apex-z-sticky:    10;
+      --apex-z-nav:       20;
+      --apex-z-drawer:    300;
+      --apex-z-modal:     400;
+      --apex-z-overlay:   500;
+      --apex-z-notify:    1000;
+      --apex-z-command:   9000;
+      /* Shell sizing */
+      --topbar-h:  52px;
+      --sidebar-w: 200px;
+      --input-h:   54px;
+    }
+
+    /* ── 2. RESET ──────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--apex-color-bg);
+      color: var(--apex-color-text-primary);
+      -webkit-font-smoothing: antialiased;
+      font-size: var(--apex-font-body, 13px);
+    }
+
+    /* ── 3. APP SHELL ──────────────────────────────────────────────── */
+    /* Desktop grid. Mobile: stacked flex. UX-05 §31. */
+    .app-shell {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: var(--topbar-h) 1fr var(--input-h);
+      grid-template-columns: var(--sidebar-w) 1fr;
+      grid-template-areas:
+        "topbar  topbar"
+        "sidenav content"
+        "sidenav inputzone";
+      background:
+        radial-gradient(ellipse 80% 55% at 50% 0%, rgba(0,102,255,0.07) 0%, transparent 65%),
+        radial-gradient(ellipse 55% 45% at 90% 90%, rgba(123,47,255,0.05) 0%, transparent 55%),
+        var(--apex-color-bg);
+    }
+
+    /* ── 4. TOPBAR ─────────────────────────────────────────────────── */
+    .topbar {
+      grid-area: topbar;
+      height: var(--topbar-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--apex-space-7);
+      background: var(--apex-color-surface-3);
+      border-bottom: var(--apex-border-standard) solid var(--apex-color-border-dim);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: var(--apex-z-nav);
+      gap: var(--apex-space-4);
+    }
+    .topbar-brand { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+    /* Brand ring — PROTECT (UX-05 §4.3) */
+    .brand-ring {
+      width: 28px; height: 28px;
+      border-radius: var(--apex-radius-circle);
+      border: 1.5px solid var(--apex-color-primary);
+      display: grid; place-items: center;
+      box-shadow: 0 0 10px var(--apex-color-primary-glow), inset 0 0 8px rgba(0,212,255,0.05);
+      animation: brandPulse 3s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    @keyframes brandPulse {
+      0%,100% { box-shadow: 0 0 10px var(--apex-color-primary-glow); }
+      50%      { box-shadow: 0 0 22px var(--apex-color-primary-glow), 0 0 40px rgba(0,212,255,0.15); }
+    }
+    .brand-ring-dot {
+      width: 7px; height: 7px;
+      border-radius: var(--apex-radius-circle);
+      background: var(--apex-color-primary);
+      box-shadow: 0 0 5px var(--apex-color-primary);
+    }
+    /* Brand typography — Cinzel for brand, Inter for subtitle. UX-05 §10.2 */
+    .brand-copy strong {
+      display: block; font-family: 'Cinzel', serif;
+      font-size: 12px; font-weight: 700;
+      letter-spacing: 0.26em; color: var(--apex-color-primary);
+    }
+    .brand-copy span {
+      font-size: 8px; font-weight: 500;
+      letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--apex-color-text-muted);
+    }
+    .topbar-center { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    /* Clock — JetBrains Mono, tabular-nums. UX-05 §10.3 */
+    .clock-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px; font-weight: 500;
+      letter-spacing: 0.07em; color: var(--apex-color-text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+    .clock-date {
+      font-size: 8px; letter-spacing: 0.12em;
+      color: var(--apex-color-text-muted); text-transform: uppercase;
+    }
+    .topbar-right { display: flex; align-items: center; gap: var(--apex-space-4); flex-shrink: 0; }
+    .topbar-page-context {
+      display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+    }
+    .topbar-page-title {
+      font-family: 'Cinzel', serif;
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 0.15em; color: var(--apex-color-text-primary);
+    }
+    .topbar-page-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px; color: var(--apex-color-text-muted);
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: var(--apex-radius-circle);
+      background: var(--apex-color-primary);
+      box-shadow: 0 0 5px var(--apex-color-primary);
+      transition: background var(--apex-duration-standard), box-shadow var(--apex-duration-standard);
+      flex-shrink: 0;
+    }
+
+    /* ── 5. SIDEBAR NAVIGATION ─────────────────────────────────────── */
+    .sidenav {
+      grid-area: sidenav;
+      display: flex; flex-direction: column;
+      background: var(--apex-color-surface-3);
+      border-right: var(--apex-border-standard) solid var(--apex-color-border-dim);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding-top: var(--apex-space-4);
+      overflow-y: auto;
+    }
+    .nav-item {
+      position: relative;
+      height: 52px; display: flex;
+      flex-direction: row; align-items: center;
+      justify-content: flex-start;
+      gap: var(--apex-space-5);
+      padding: 0 var(--apex-space-8);
+      background: none; border: none; cursor: pointer;
+      color: var(--apex-color-text-muted);
+      text-decoration: none;
+      transition: color var(--apex-duration-micro);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-item:hover { color: var(--apex-color-text-secondary); }
+    .nav-item.active { color: var(--apex-color-primary); }
+    /* Left border active indicator — PROTECT (UX-05 §4.2) */
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      top: 15%; bottom: 15%; left: 0;
+      width: var(--apex-border-active);
+      background: var(--apex-color-primary);
+      border-radius: 0 2px 2px 0;
+      box-shadow: 0 0 8px var(--apex-color-primary-glow);
+    }
+    .nav-item:focus-visible { outline: 2px solid rgba(0,212,255,0.60); outline-offset: -2px; }
+    .nav-icon { width: 18px; height: 18px; flex-shrink: 0; }
+    /* Nav labels: Inter uppercase. NOT JetBrains Mono. UX-05 §4.8 REFINE. */
+    .nav-label {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.09em; text-transform: uppercase;
+    }
+    .nav-spacer { flex: 1; }
+    .nav-version {
+      padding: var(--apex-space-5) var(--apex-space-8);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; color: var(--apex-color-text-dim);
+      letter-spacing: 0.04em;
+    }
+
+    /* ── 6. CONTENT AREA ───────────────────────────────────────────── */
+    .content-area {
+      grid-area: content;
+      position: relative;
+      overflow: hidden;
+      min-height: 0;
+    }
+    /* Command two-column layout. UX-05 §18.2 */
+    .cmd-layout {
+      display: grid;
+      grid-template-columns: 5fr 4fr;
+      height: 100%;
+      gap: var(--apex-space-6);
+      padding: var(--apex-space-7);
+      overflow: hidden;
+    }
+
+    /* ── 7. LEFT ZONE (Orb, Waveform, Stats, Constitution) ─────────── */
+    .cmd-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--apex-space-5);
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── 8. ORB — core APEX presence. UX-05 §16. PROTECT. ─────────── */
+    .orb-shell {
+      position: relative;
+      width: 130px; height: 130px;
+      display: grid; place-items: center;
+      flex-shrink: 0;
+      margin-top: var(--apex-space-5);
+    }
+    /* Pulse rings — PROTECT (UX-05 §16.2) */
+    .pulse-ring {
+      position: absolute;
+      border-radius: var(--apex-radius-circle);
+      border: 1px solid var(--apex-color-primary-dim);
+      animation: pulseExpand 3s ease-out infinite;
+      pointer-events: none;
+      transition: border-color var(--apex-duration-standard);
+    }
+    .pr1 { width: 100%; height: 100%; animation-delay: 0s; }
+    .pr2 { width: 132%; height: 132%; animation-delay: 1s; }
+    .pr3 { width: 164%; height: 164%; animation-delay: 2s; }
+    @keyframes pulseExpand {
+      0%   { opacity: 0.5; transform: scale(0.93); }
+      70%  { opacity: 0.1; transform: scale(1.05); }
+      100% { opacity: 0;   transform: scale(1.08); }
+    }
+    /* Orb body — PROTECT (UX-05 §16.2) */
+    .orb {
+      position: relative; z-index: 2;
+      width: 88px; height: 88px;
+      border-radius: var(--apex-radius-circle);
+      background: radial-gradient(circle at 35% 35%,
+        rgba(0,212,255,0.22), rgba(0,102,255,0.12) 55%, rgba(0,0,0,0) 80%),
+        rgba(5,10,26,0.96);
+      border: 1.5px solid rgba(0,212,255,0.38);
+      box-shadow: var(--apex-shadow-glow-primary), inset 0 0 18px rgba(0,212,255,0.07);
+      cursor: pointer;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      transition: box-shadow var(--apex-duration-standard), border-color var(--apex-duration-standard);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .orb:hover {
+      box-shadow: 0 0 34px rgba(0,212,255,0.32), inset 0 0 22px rgba(0,212,255,0.10);
+      border-color: rgba(0,212,255,0.60);
+    }
+    /* Orb text — Inter 800 for brand label per UX-05 §10.2 */
+    .orb-name {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 10px; font-weight: 800;
+      letter-spacing: 0.24em; color: var(--apex-color-primary);
+    }
+    .orb-sub {
+      font-size: 7px; letter-spacing: 0.14em;
+      color: rgba(0,212,255,0.50); text-transform: uppercase;
+      margin-top: 2px;
+      transition: color var(--apex-duration-standard);
+    }
+    /* IDLE — default. UX-05 §16.3. Maps to legacy 'waiting' animation. */
+    .orb-idle .orb {
+      border-color: rgba(0,212,255,0.38);
+      animation: orbIdle 4s ease-in-out infinite;
+    }
+    @keyframes orbIdle {
+      0%,100% { box-shadow: 0 0 12px rgba(0,212,255,0.12), inset 0 0 10px rgba(0,212,255,0.04); }
+      50%      { box-shadow: 0 0 28px rgba(0,212,255,0.28), inset 0 0 16px rgba(0,212,255,0.08); }
+    }
+    /* ACTIVATING */
+    .orb-activating .orb {
+      border-color: rgba(0,212,255,0.55) !important;
+      animation: orbActivate 0.5s ease-in-out forwards;
+    }
+    @keyframes orbActivate {
+      from { box-shadow: 0 0 22px rgba(0,212,255,0.18); }
+      to   { box-shadow: 0 0 36px rgba(0,212,255,0.40); }
+    }
+    /* LISTENING — red pulse. PROTECT. UX-05 §16.3. */
+    .orb-listening .orb {
+      border-color: rgba(255,77,109,0.70) !important;
+      animation: orbListen 0.55s ease-in-out infinite alternate;
+    }
+    @keyframes orbListen {
+      from { box-shadow: 0 0 0 3px rgba(255,77,109,0.40), 0 0 28px rgba(255,77,109,0.30); }
+      to   { box-shadow: 0 0 0 8px rgba(255,77,109,0.60), 0 0 48px rgba(255,77,109,0.45); }
+    }
+    .orb-listening .pulse-ring { border-color: rgba(255,77,109,0.25); }
+    /* UNDERSTANDING — amber breathe. PROPOSED NEW state. UX-05 §16.4. */
+    .orb-understanding .orb {
+      border-color: rgba(255,159,67,0.55) !important;
+      animation: orbThink 1.2s ease-in-out infinite;
+    }
+    @keyframes orbThink {
+      0%,100% { box-shadow: 0 0 18px rgba(255,159,67,0.40); }
+      50%      { box-shadow: 0 0 36px rgba(255,159,67,0.65); }
+    }
+    .orb-understanding .pulse-ring { border-color: rgba(255,159,67,0.20); }
+    /* RESPONDING */
+    .orb-responding .orb {
+      border-color: rgba(0,212,255,0.60) !important;
+      animation: orbRespond 0.6s ease-in-out;
+    }
+    @keyframes orbRespond {
+      from { box-shadow: 0 0 16px rgba(255,159,67,0.40); }
+      to   { box-shadow: 0 0 28px rgba(0,212,255,0.40); }
+    }
+    /* SPEAKING — strong cyan pulse. PROTECT (orbActive). UX-05 §16.3. */
+    .orb-speaking .orb {
+      border-color: rgba(0,212,255,0.70) !important;
+      animation: orbSpeak 0.6s ease-in-out infinite alternate;
+    }
+    @keyframes orbSpeak {
+      from { box-shadow: 0 0 10px rgba(0,212,255,0.40), 0 0 24px rgba(0,212,255,0.20); }
+      to   { box-shadow: 0 0 24px rgba(0,212,255,0.80), 0 0 52px rgba(0,212,255,0.40), inset 0 0 20px rgba(0,212,255,0.10); }
+    }
+    /* INTERRUPTED */
+    .orb-interrupted .orb {
+      border-color: rgba(255,159,67,0.60) !important;
+      animation: orbInterrupt 300ms ease-out 2 forwards;
+    }
+    @keyframes orbInterrupt {
+      0%   { box-shadow: 0 0 40px rgba(255,159,67,0.70); }
+      100% { box-shadow: 0 0 16px rgba(255,159,67,0.30); }
+    }
+    /* PAUSED */
+    .orb-paused .orb {
+      border-color: rgba(0,212,255,0.25) !important;
+      animation: none;
+      box-shadow: 0 0 12px rgba(0,212,255,0.12);
+    }
+    /* LIVE — duplex mode */
+    .orb-live .orb {
+      border-color: rgba(0,212,255,0.60) !important;
+      animation: orbLive 2s ease-in-out infinite;
+    }
+    @keyframes orbLive {
+      0%,100% { box-shadow: 0 0 28px rgba(0,212,255,0.35); }
+      50%      { box-shadow: 0 0 44px rgba(0,212,255,0.55); }
+    }
+    /* FAILED */
+    .orb-failed .orb {
+      border-color: rgba(255,77,109,0.70) !important;
+      animation: orbFail 1.5s ease-in-out forwards;
+    }
+    @keyframes orbFail {
+      0%   { box-shadow: 0 0 40px rgba(255,77,109,0.60); }
+      100% { box-shadow: 0 0 22px rgba(0,212,255,0.18); }
+    }
+    .orb-failed .pulse-ring { border-color: rgba(255,77,109,0.25); }
+    /* CANCELLED */
+    .orb-cancelled .orb {
+      border-color: rgba(0,212,255,0.20) !important;
+      animation: none;
+      box-shadow: 0 0 8px rgba(0,212,255,0.08);
+      opacity: 0.6;
+    }
+
+    /* ── 9. WAVEFORM — PROTECT (UX-05 §17). 7 bars exactly. ─────────── */
+    .waveform {
+      display: flex; align-items: center;
+      gap: 3px; height: 26px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .waveform.active { opacity: 1; }
+    .wb {
+      width: 3px;
+      background: var(--apex-color-primary);
+      border-radius: 2px;
+      height: 5px;
+    }
+    /* Staggered delays — PROTECT. UX-05 §17.2. */
+    .waveform.active .wb:nth-child(1) { animation: wb 0.48s ease-in-out 0.00s infinite alternate; }
+    .waveform.active .wb:nth-child(2) { animation: wb 0.48s ease-in-out 0.07s infinite alternate; }
+    .waveform.active .wb:nth-child(3) { animation: wb 0.48s ease-in-out 0.14s infinite alternate; }
+    .waveform.active .wb:nth-child(4) { animation: wb 0.48s ease-in-out 0.21s infinite alternate; }
+    .waveform.active .wb:nth-child(5) { animation: wb 0.48s ease-in-out 0.28s infinite alternate; }
+    .waveform.active .wb:nth-child(6) { animation: wb 0.48s ease-in-out 0.35s infinite alternate; }
+    .waveform.active .wb:nth-child(7) { animation: wb 0.48s ease-in-out 0.42s infinite alternate; }
+    @keyframes wb {
+      from { height: 4px; }
+      to   { height: 18px; }
+    }
+    /* State-responsive waveform colour. UX-05 §17.3 PROPOSED. */
+    .orb-listening .waveform.active .wb { background: var(--apex-color-danger); }
+    .orb-speaking  .waveform.active .wb,
+    .orb-live      .waveform.active .wb { background: var(--apex-color-primary); }
+    /* Show waveform on LISTENING, SPEAKING, LIVE. UX-05 §17.3. */
+    .orb-listening .waveform,
+    .orb-speaking  .waveform,
+    .orb-live      .waveform { opacity: 1; }
+
+    /* ── 10. STAT CHIPS ─────────────────────────────────────────────── */
+    .stat-chips {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: var(--apex-space-3); width: 100%; max-width: 320px;
+    }
+    .stat-chip {
+      background: var(--apex-color-surface-1);
+      border: var(--apex-border-standard) solid var(--apex-color-border-dim);
+      border-radius: var(--apex-radius-2xl);
+      padding: var(--apex-space-4) var(--apex-space-5);
+      backdrop-filter: blur(20px);
+      display: flex; align-items: center; gap: var(--apex-space-3);
+      transition: border-color var(--apex-duration-micro);
+    }
+    .stat-chip:hover { border-color: var(--apex-color-border); }
+    .stat-icon { width: 20px; height: 20px; flex-shrink: 0; opacity: 0.75; }
+    .stat-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    /* Value: JetBrains Mono, tabular-nums. UX-05 §28.8. */
+    .stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px; font-weight: 500;
+      color: var(--apex-color-text-primary);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    /* Label: Inter uppercase. UX-05 §28.8. */
+    .stat-label {
+      font-size: 8px; font-weight: 700;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--apex-color-text-muted);
+    }
+
+    /* ── 11. CONSTITUTION CHARTER — PROTECT (UX-05 §4.3) ────────────── */
+    .constitution {
+      width: 100%; max-width: 340px;
+      background: var(--apex-color-surface-1);
+      border: var(--apex-border-standard) solid var(--apex-color-border-dim);
+      border-radius: var(--apex-radius-2xl);
+      padding: var(--apex-space-5);
+      backdrop-filter: blur(20px);
+    }
+    .constitution-header {
+      font-family: 'Cinzel', serif;
+      font-size: 9px; font-weight: 600;
+      letter-spacing: 0.20em; text-transform: uppercase;
+      color: var(--apex-color-primary);
+      margin-bottom: var(--apex-space-4);
+      display: flex; align-items: center; gap: var(--apex-space-3);
+    }
+    .constitution-header::after {
+      content: ''; flex: 1;
+      height: 1px; background: var(--apex-color-border-dim);
+    }
+    .charter-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: var(--apex-space-3);
+    }
+    .charter-article {
+      padding: var(--apex-space-3) var(--apex-space-4);
+      background: rgba(0,212,255,0.02);
+      border: var(--apex-border-standard) solid var(--apex-color-border-dim);
+      border-radius: var(--apex-radius-lg);
+    }
+    .charter-id {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px; color: var(--apex-color-primary);
+      letter-spacing: 0.06em; font-weight: 600;
+    }
+    .charter-text {
+      font-size: 9px; color: var(--apex-color-text-muted);
+      line-height: 1.35; margin-top: 2px;
+    }
+
+    /* ── 12. RIGHT ZONE (Activity, Conversation) ────────────────────── */
+    .cmd-right {
+      display: flex; flex-direction: column;
+      gap: var(--apex-space-5); overflow: hidden; min-height: 0;
+    }
+    .panel {
+      background: var(--apex-color-surface-1);
+      border: var(--apex-border-standard) solid var(--apex-color-border-dim);
+      border-radius: var(--apex-radius-2xl);
+      padding: var(--apex-space-6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .panel-hd {
+      font-size: 9px; font-weight: 700;
+      letter-spacing: 0.20em; text-transform: uppercase;
+      color: var(--apex-color-text-muted);
+      margin-bottom: var(--apex-space-4);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .panel-hd-btn {
+      font-size: 9px; padding: 2px 7px;
+      border: var(--apex-border-standard) solid var(--apex-color-border);
+      border-radius: var(--apex-radius-sm);
+      background: transparent; color: var(--apex-color-primary);
+      cursor: pointer; letter-spacing: 0.04em;
+      transition: background var(--apex-duration-micro);
+    }
+    .panel-hd-btn:hover { background: var(--apex-color-primary-dim); }
+
+    /* ── 13. ACTIVITY FEED ──────────────────────────────────────────── */
+    .activity-feed { flex: 1; overflow-y: auto; min-height: 0; }
+    .feed-scroll { display: flex; flex-direction: column; gap: var(--apex-space-3); }
+    .feed-item {
+      display: flex; align-items: flex-start; gap: var(--apex-space-3);
+      padding: var(--apex-space-3) var(--apex-space-4);
+      background: rgba(255,255,255,0.02);
+      border: var(--apex-border-standard) solid rgba(255,255,255,0.05);
+      border-radius: var(--apex-radius-lg);
+      transition: border-color var(--apex-duration-micro);
+    }
+    .feed-item:hover { border-color: var(--apex-color-border-dim); }
+    .feed-dot {
+      width: 6px; height: 6px; border-radius: var(--apex-radius-circle);
+      flex-shrink: 0; margin-top: 3px;
+    }
+    .feed-dot.cyan    { background: var(--apex-color-primary); box-shadow: 0 0 4px var(--apex-color-primary); }
+    .feed-dot.green   { background: var(--apex-color-success); }
+    .feed-dot.amber   { background: var(--apex-color-warning); }
+    .feed-dot.grey    { background: var(--apex-color-text-dim); }
+    .feed-body { flex: 1; min-width: 0; }
+    .feed-agent {
+      font-size: 9px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--apex-color-text-muted); margin-bottom: 2px;
+    }
+    .feed-msg {
+      font-size: 11px; color: var(--apex-color-text-secondary);
+      line-height: 1.4; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+    .feed-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; color: var(--apex-color-text-dim);
+      flex-shrink: 0; align-self: center;
+    }
+
+    /* ── 14. CONVERSATION ───────────────────────────────────────────── */
+    .conv-log { display: flex; flex-direction: column; gap: var(--apex-space-3); }
+    .conv-msg {
+      max-width: 88%; padding: var(--apex-space-4) var(--apex-space-5);
+      border-radius: var(--apex-radius-2xl);
+      font-size: 13px; line-height: 1.55;
+    }
+    .conv-msg.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, rgba(0,102,255,0.30), rgba(0,212,255,0.18));
+      border: var(--apex-border-standard) solid rgba(0,212,255,0.22);
+      border-bottom-right-radius: var(--apex-radius-xs);
+    }
+    .conv-msg.ai {
+      align-self: flex-start;
+      background: var(--apex-color-surface-1);
+      border: var(--apex-border-standard) solid var(--apex-color-border-dim);
+      border-bottom-left-radius: var(--apex-radius-xs);
+    }
+    .typing-indicator {
+      display: flex; align-self: flex-start;
+      gap: 4px; padding: var(--apex-space-4) var(--apex-space-5);
+      background: var(--apex-color-surface-1);
+      border: var(--apex-border-standard) solid var(--apex-color-border-dim);
+      border-radius: var(--apex-radius-2xl);
+      border-bottom-left-radius: var(--apex-radius-xs);
+    }
+    .typing-dot {
+      width: 6px; height: 6px; border-radius: var(--apex-radius-circle);
+      background: var(--apex-color-text-muted);
+      animation: typingBounce 1.4s ease-in-out infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce {
+      0%,60%,100% { transform: translateY(0); opacity: 0.35; }
+      30%          { transform: translateY(-4px); opacity: 1; }
+    }
+
+    /* ── 15. INPUT ZONE — always visible. D-03 resolved. UX-05 §4.6. ── */
+    .input-zone {
+      grid-area: inputzone;
+      height: var(--input-h);
+      display: flex; align-items: center;
+      gap: var(--apex-space-3);
+      padding: 0 var(--apex-space-5);
+      background: var(--apex-color-surface-3);
+      border-top: var(--apex-border-standard) solid var(--apex-color-border-dim);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    /* Pill chat input — PROTECT (UX-05 §28.3) */
+    .chat-input {
+      flex: 1;
+      height: 36px;
+      background: rgba(255,255,255,0.06);
+      border: var(--apex-border-standard) solid rgba(255,255,255,0.10);
+      border-radius: var(--apex-radius-pill);
+      padding: 0 var(--apex-space-7);
+      font-size: 13px; color: var(--apex-color-text-primary);
+      outline: none; font-family: 'Inter', system-ui, sans-serif;
+      transition: border-color var(--apex-duration-micro), background var(--apex-duration-micro);
+    }
+    .chat-input:focus {
+      border-color: rgba(0,212,255,0.40);
+      background: rgba(255,255,255,0.09);
+      outline: 2px solid rgba(0,212,255,0.25);
+      outline-offset: 1px;
+    }
+    .chat-input::placeholder { color: var(--apex-color-text-dim); }
+    /* Mic button — PROTECT (UX-05 §28.2) */
+    .mic-btn {
+      width: 36px; height: 36px;
+      border-radius: var(--apex-radius-circle);
+      border: var(--apex-border-standard) solid var(--apex-color-border);
+      background: var(--apex-color-surface-1);
+      color: var(--apex-color-text-primary);
+      cursor: pointer; display: grid; place-items: center;
+      transition: all var(--apex-duration-micro); flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .mic-btn:hover { background: rgba(255,77,109,0.15); border-color: rgba(255,77,109,0.50); }
+    .mic-btn.active { background: rgba(255,77,109,0.20); border-color: rgba(255,77,109,0.60); }
+    .mic-btn:focus-visible { outline: 2px solid rgba(0,212,255,0.60); outline-offset: 2px; }
+    /* Send button — PROTECT (UX-05 §28.1 primary variant) */
+    .send-btn {
+      width: 36px; height: 36px;
+      border-radius: var(--apex-radius-circle);
+      border: none;
+      background: linear-gradient(135deg, var(--apex-color-secondary), var(--apex-color-primary));
+      color: #fff; cursor: pointer;
+      display: grid; place-items: center;
+      transition: all var(--apex-duration-micro); flex-shrink: 0;
+      box-shadow: 0 0 10px var(--apex-color-primary-dim);
+    }
+    .send-btn:hover { box-shadow: 0 0 18px var(--apex-color-primary-glow); transform: scale(1.05); }
+    .send-btn:focus-visible { outline: 2px solid rgba(0,212,255,0.60); outline-offset: 2px; }
+    .input-label {
+      font-size: 8px; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--apex-color-text-dim); flex-shrink: 0;
+    }
+    .live-pill {
+      font-size: 8px; font-weight: 700;
+      letter-spacing: 0.10em; text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: var(--apex-radius-pill);
+      border: var(--apex-border-standard) solid var(--apex-color-border);
+      background: transparent; color: var(--apex-color-text-muted);
+      cursor: pointer; flex-shrink: 0;
+      transition: all var(--apex-duration-micro);
+    }
+    .live-pill.active {
+      border-color: rgba(0,212,255,0.40);
+      background: var(--apex-color-primary-dim);
+      color: var(--apex-color-primary);
+    }
+
+    /* ── 16. PRESENTATION SURFACE — UX-05 §24. ─────────────────────── */
+    /* Appears at Level 3 elevation, adjacent to orb. Never covers orb. */
+    .pres-surface {
+      position: absolute;
+      top: var(--apex-space-7); left: var(--apex-space-7); right: var(--apex-space-7);
+      background: var(--apex-color-surface-3);
+      border: var(--apex-border-standard) solid rgba(0,212,255,0.20);
+      border-radius: var(--apex-radius-3xl);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: var(--apex-z-overlay);
+      max-height: 68%;
+      overflow: hidden;
+      opacity: 0; transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity var(--apex-duration-deliberate) ease-out,
+                  transform var(--apex-duration-deliberate) ease-out;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.50);
+    }
+    .pres-surface.active {
+      opacity: 1; transform: translateY(0); pointer-events: auto;
+    }
+    .pres-hd {
+      display: flex; align-items: center; gap: var(--apex-space-4);
+      padding: var(--apex-space-5) var(--apex-space-6);
+      border-bottom: var(--apex-border-standard) solid var(--apex-color-border-dim);
+    }
+    .pres-type-badge {
+      font-size: 8px; font-weight: 700;
+      letter-spacing: 0.10em; text-transform: uppercase;
+      padding: 2px 6px; border-radius: var(--apex-radius-xs);
+      background: var(--apex-color-primary-dim);
+      color: var(--apex-color-primary);
+      border: var(--apex-border-standard) solid rgba(0,212,255,0.20);
+      flex-shrink: 0;
+    }
+    .pres-title {
+      flex: 1; font-size: 13px; font-weight: 600;
+      color: var(--apex-color-text-primary);
+    }
+    .pres-close {
+      width: 24px; height: 24px; border-radius: var(--apex-radius-circle);
+      background: transparent; border: none;
+      color: var(--apex-color-text-muted); cursor: pointer;
+      display: grid; place-items: center; font-size: 14px;
+      transition: color var(--apex-duration-micro);
+      flex-shrink: 0;
+    }
+    .pres-close:hover { color: var(--apex-color-text-primary); }
+    .pres-close:focus-visible { outline: 2px solid rgba(0,212,255,0.60); outline-offset: 2px; }
+    .pres-body { padding: var(--apex-space-6); overflow-y: auto; }
+    .pres-stat-row {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: var(--apex-space-4); margin-bottom: var(--apex-space-6);
+    }
+    .pres-stat {
+      background: var(--apex-color-surface-1);
+      border: var(--apex-border-standard) solid var(--apex-color-border-dim);
+      border-radius: var(--apex-radius-xl);
+      padding: var(--apex-space-4) var(--apex-space-5); text-align: center;
+    }
+    .pres-stat-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px; font-weight: 600;
+      color: var(--apex-color-domain-finance);
+      font-variant-numeric: tabular-nums;
+    }
+    .pres-stat-lbl {
+      font-size: 9px; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--apex-color-text-muted); margin-top: 3px;
+    }
+    /* Horizontal progress bars for finance categories */
+    .pres-bar-row { margin-bottom: var(--apex-space-4); }
+    .pres-bar-lbl {
+      display: flex; justify-content: space-between;
+      font-size: 10px; color: var(--apex-color-text-secondary); margin-bottom: 3px;
+    }
+    .pres-bar-bg {
+      background: rgba(255,255,255,0.06);
+      border-radius: var(--apex-radius-xs); height: 4px; overflow: hidden;
+    }
+    .pres-bar-fill {
+      height: 4px; border-radius: var(--apex-radius-xs);
+      background: linear-gradient(90deg, var(--apex-color-secondary), var(--apex-color-domain-finance));
+      transition: width 0.45s ease-out;
+    }
+    .pres-bar-fill.over {
+      background: linear-gradient(90deg, var(--apex-color-warning), var(--apex-color-danger));
+    }
+
+    /* ── 17. NOTIFICATIONS — UX-05 §25. ────────────────────────────── */
+    .notify-banner {
+      position: fixed;
+      top: calc(var(--topbar-h) + var(--apex-space-4));
+      right: var(--apex-space-7);
+      width: 340px;
+      background: var(--apex-color-surface-3);
+      border: var(--apex-border-standard) solid var(--apex-color-border);
+      border-radius: var(--apex-radius-2xl);
+      padding: var(--apex-space-5) var(--apex-space-6);
+      z-index: var(--apex-z-notify);
+      opacity: 0; transform: translateX(360px);
+      pointer-events: none;
+      transition: opacity var(--apex-duration-standard) ease-out,
+                  transform var(--apex-duration-standard) ease-out;
+      backdrop-filter: blur(20px);
+      border-left: var(--apex-border-active) solid transparent;
+    }
+    .notify-banner.active { opacity: 1; transform: translateX(0); pointer-events: auto; }
+    /* Level variants — UX-05 §25.1 */
+    .notify-banner.l2 { border-left-color: var(--apex-color-primary); }
+    .notify-banner.l3 { border-left-color: var(--apex-color-primary); box-shadow: 0 0 12px rgba(0,212,255,0.12); }
+    .notify-banner.l4 { border-left-color: var(--apex-color-warning); border-color: rgba(255,159,67,0.30); }
+    .notify-banner.l5 { border-left-color: var(--apex-color-danger); border-color: rgba(255,77,109,0.40); animation: notifyUrgent 1.5s ease-in-out infinite; }
+    @keyframes notifyUrgent {
+      0%,100% { box-shadow: 0 0 8px rgba(255,77,109,0.20); }
+      50%      { box-shadow: 0 0 20px rgba(255,77,109,0.40); }
+    }
+    .notify-row { display: flex; align-items: flex-start; gap: var(--apex-space-4); }
+    .notify-icon { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+    .notify-body { flex: 1; min-width: 0; }
+    .notify-cat {
+      font-size: 8px; font-weight: 700;
+      letter-spacing: 0.10em; text-transform: uppercase;
+      color: var(--apex-color-text-muted); margin-bottom: 3px;
+    }
+    .notify-subject {
+      font-size: 12px; font-weight: 600;
+      color: var(--apex-color-text-primary); margin-bottom: 4px;
+    }
+    .notify-body-text {
+      font-size: 11px; color: var(--apex-color-text-secondary);
+      line-height: 1.4;
+    }
+    .notify-actions {
+      display: flex; gap: var(--apex-space-3); margin-top: var(--apex-space-4);
+    }
+    .notify-btn {
+      font-size: 10px; padding: 4px 10px;
+      border-radius: var(--apex-radius-md);
+      border: var(--apex-border-standard) solid var(--apex-color-border);
+      background: transparent; color: var(--apex-color-text-secondary);
+      cursor: pointer; transition: all var(--apex-duration-micro);
+    }
+    .notify-btn:hover { border-color: var(--apex-color-primary); color: var(--apex-color-primary); }
+    .notify-btn.primary-action { border-color: var(--apex-color-primary); color: var(--apex-color-primary); }
+    .notify-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; color: var(--apex-color-text-dim);
+      flex-shrink: 0;
+    }
+
+    /* ── 18. DECISION CARD — UX-05 §20. ────────────────────────────── */
+    .decision-modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.72);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: var(--apex-z-modal);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity var(--apex-duration-standard);
+    }
+    .decision-modal.active { opacity: 1; pointer-events: auto; }
+    .decision-card {
+      width: min(480px, 94vw);
+      background: var(--apex-color-surface-4);
+      border: var(--apex-border-standard) solid rgba(0,212,255,0.20);
+      border-left: var(--apex-border-active) solid var(--apex-color-warning);
+      border-radius: var(--apex-radius-3xl);
+      padding: var(--apex-space-10);
+      box-shadow: var(--apex-shadow-modal);
+      display: flex; flex-direction: column; gap: var(--apex-space-6);
+    }
+    .decision-hd { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--apex-space-4); }
+    .decision-title { font-size: 16px; font-weight: 600; color: var(--apex-color-text-primary); line-height: 1.3; }
+    .decision-badge {
+      font-size: 8px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase;
+      padding: 3px 8px; border-radius: var(--apex-radius-xs); flex-shrink: 0;
+      background: var(--apex-color-warning-dim);
+      color: var(--apex-color-warning);
+      border: var(--apex-border-standard) solid rgba(255,159,67,0.30);
+    }
+    .decision-summary {
+      font-size: 13px; color: var(--apex-color-text-secondary); line-height: 1.6;
+    }
+    /* Evidence block — UX-05 §28.12. */
+    .evidence-block {
+      background: var(--apex-color-surface-1);
+      border: var(--apex-border-standard) solid var(--apex-color-border-dim);
+      border-left: 3px solid var(--apex-color-domain-finance);
+      border-radius: var(--apex-radius-lg);
+      padding: var(--apex-space-4) var(--apex-space-5);
+    }
+    .evidence-source {
+      font-size: 10px; color: var(--apex-color-text-muted);
+      margin-bottom: var(--apex-space-2);
+    }
+    .evidence-text { font-size: 11px; color: var(--apex-color-text-secondary); line-height: 1.45; }
+    .evidence-conf { display: flex; align-items: center; gap: var(--apex-space-3); margin-top: var(--apex-space-3); }
+    .evidence-conf-bar-bg {
+      flex: 1; height: 3px; border-radius: 2px;
+      background: rgba(255,255,255,0.07);
+    }
+    .evidence-conf-fill {
+      height: 3px; border-radius: 2px;
+      background: var(--apex-color-success);
+    }
+    .evidence-conf-pct {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; color: var(--apex-color-success); flex-shrink: 0;
+    }
+    /* Decision action buttons — UX-05 §28.14. Full-width; prominent. */
+    .decision-actions { display: flex; flex-direction: column; gap: var(--apex-space-3); }
+    .decision-approve, .decision-reject {
+      width: 100%; height: 44px;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 14px; font-weight: 600;
+      letter-spacing: 0.04em;
+      border: none; border-radius: var(--apex-radius-lg); cursor: pointer;
+      transition: all var(--apex-duration-micro);
+    }
+    .decision-approve {
+      background: var(--apex-color-success); color: #fff;
+    }
+    .decision-approve:hover { filter: brightness(1.1); }
+    .decision-reject {
+      background: var(--apex-color-danger); color: #fff;
+    }
+    .decision-reject:hover { filter: brightness(1.1); }
+    .decision-secondary { display: flex; gap: var(--apex-space-3); }
+    .decision-modify, .decision-defer {
+      flex: 1; height: 40px;
+      font-size: 13px; font-weight: 500;
+      border-radius: var(--apex-radius-lg); cursor: pointer;
+      background: transparent;
+      transition: all var(--apex-duration-micro);
+    }
+    .decision-modify { border: var(--apex-border-standard) solid rgba(255,159,67,0.40); color: var(--apex-color-warning); }
+    .decision-modify:hover { background: var(--apex-color-warning-dim); }
+    .decision-defer { border: var(--apex-border-standard) solid var(--apex-color-border); color: var(--apex-color-text-muted); }
+    .decision-defer:hover { border-color: var(--apex-color-primary); color: var(--apex-color-primary); }
+
+    /* ── 19. PROTOTYPE CONTROLS — development tool only ────────────── */
+    .proto-controls {
+      position: fixed;
+      bottom: calc(var(--input-h) + var(--apex-space-4));
+      right: var(--apex-space-7);
+      background: rgba(5,10,26,0.97);
+      border: var(--apex-border-standard) solid rgba(0,212,255,0.30);
+      border-radius: var(--apex-radius-2xl);
+      padding: var(--apex-space-5) var(--apex-space-6);
+      z-index: 10000;
+      min-width: 220px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.60);
+    }
+    .proto-title {
+      font-size: 9px; font-weight: 700;
+      letter-spacing: 0.20em; text-transform: uppercase;
+      color: var(--apex-color-primary); margin-bottom: var(--apex-space-4);
+      display: flex; align-items: center; gap: var(--apex-space-3);
+    }
+    .proto-section { margin-bottom: var(--apex-space-4); }
+    .proto-section-label {
+      font-size: 8px; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--apex-color-text-dim); margin-bottom: var(--apex-space-3);
+    }
+    .proto-btn-grid { display: flex; flex-wrap: wrap; gap: var(--apex-space-2); }
+    .proto-btn {
+      font-size: 9px; padding: 3px 7px;
+      border-radius: var(--apex-radius-sm);
+      border: var(--apex-border-standard) solid var(--apex-color-border-dim);
+      background: var(--apex-color-surface-1); color: var(--apex-color-text-muted);
+      cursor: pointer; transition: all var(--apex-duration-micro);
+      white-space: nowrap;
+    }
+    .proto-btn:hover { border-color: var(--apex-color-primary); color: var(--apex-color-primary); }
+    .proto-btn.active-state { border-color: var(--apex-color-primary); color: var(--apex-color-primary); background: var(--apex-color-primary-dim); }
+    .proto-state-display {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--apex-color-primary);
+      letter-spacing: 0.06em;
+    }
+
+    /* ── 20. RESPONSIVE — Mobile (< 900px). UX-05 §31. ─────────────── */
+    @media (max-width: 899px) {
+      .app-shell {
+        grid-template-rows: var(--topbar-h) 1fr auto var(--input-h);
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "topbar"
+          "content"
+          "sidenav"
+          "inputzone";
+      }
+      .sidenav {
+        flex-direction: row;
+        padding: 0;
+        border-right: none;
+        border-top: var(--apex-border-standard) solid var(--apex-color-border-dim);
+        height: 60px;
+        overflow-x: auto; overflow-y: hidden;
+      }
+      .nav-item {
+        height: 60px; flex-direction: column;
+        justify-content: center; padding: 0 var(--apex-space-4);
+        min-width: 60px; gap: 3px;
+      }
+      .nav-item.active::before { display: none; }
+      .nav-item.active::after {
+        content: ''; position: absolute;
+        top: 0; left: 22%; right: 22%;
+        height: 2px; background: var(--apex-color-primary);
+        border-radius: 0 0 2px 2px;
+        box-shadow: 0 0 8px var(--apex-color-primary-glow);
+      }
+      .nav-label { font-size: 8px; letter-spacing: 0.11em; }
+      .nav-spacer, .nav-version { display: none; }
+      .cmd-layout { grid-template-columns: 1fr; padding: var(--apex-space-5); gap: var(--apex-space-5); overflow-y: auto; }
+      .cmd-right { max-height: 300px; }
+      .stat-chips { grid-template-columns: 1fr 1fr; max-width: 100%; }
+      .notify-banner { width: calc(100vw - 28px); right: var(--apex-space-7); }
+      .proto-controls { display: none; }
+    }
+
+    /* ── 21. SCROLLBARS ─────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.15); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.30); }
+
+    /* ── 22. FOCUS RING — UX-05 §29.1. INV-VS-23. NEVER suppressed. ── */
+    :focus-visible {
+      outline: 2px solid rgba(0,212,255,0.60);
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+
+    /* ── 23. REDUCED MOTION — PROTECT. UX-05 §15.5. INV-VS-10. ──────── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      .waveform.active .wb { height: 10px; }
+    }
+
+    /* ── 24. SKIP TO MAIN — PROTECT (UX-05 §33.2) ──────────────────── */
+    .skip-to-main {
+      position: absolute; top: -100%; left: var(--apex-space-8);
+      background: var(--apex-color-primary); color: #000;
+      padding: var(--apex-space-3) var(--apex-space-6);
+      border-radius: var(--apex-radius-lg);
+      font-size: 12px; font-weight: 600;
+      z-index: 99999; text-decoration: none;
+    }
+    .skip-to-main:focus { top: var(--apex-space-3); }
+
+    /* ── 25. UTILITY ─────────────────────────────────────────────────── */
+    .visually-hidden {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); border: 0;
+    }
+    .dot-sep { color: var(--apex-color-text-dim); margin: 0 4px; }
+  </style>
+</head>
+
+<body>
+  <!-- Accessibility: skip-to-main — PROTECT (UX-05 §33.2) -->
+  <a href="#cmd-main" class="skip-to-main">Skip to main content</a>
+  <!-- Accessibility: live region for APEX state announcements -->
+  <div aria-live="polite" class="visually-hidden" id="apex-live-region"></div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       APP SHELL — UX-05 §31.2 responsive grid
+  ════════════════════════════════════════════════════════════════ -->
+  <div class="app-shell" role="application" aria-label="APEX Command Centre">
+
+    <!-- ── TOPBAR ─────────────────────────────────────────────────── -->
+    <header class="topbar" role="banner">
+      <!-- Brand: brand-ring + APEX wordmark. PROTECT. UX-05 §4.3. -->
+      <div class="topbar-brand">
+        <div class="brand-ring" role="status" aria-label="APEX online">
+          <div class="brand-ring-dot"></div>
+        </div>
+        <div class="brand-copy">
+          <strong>APEX</strong>
+          <span>AI OS</span>
+        </div>
+      </div>
+      <!-- Clock: JetBrains Mono, tabular-nums. PROTECT. -->
+      <div class="topbar-center" aria-label="Current time">
+        <span class="clock-time" id="clock-time">00:00:00</span>
+        <span class="clock-date" id="clock-date">— — —</span>
+      </div>
+      <!-- Page context + status -->
+      <div class="topbar-right">
+        <div class="topbar-page-context" aria-hidden="true">
+          <span class="topbar-page-title">COMMAND</span>
+          <span class="topbar-page-sub">CONVERSATION · VOICE · PRESENCE</span>
+        </div>
+        <div class="status-dot" id="status-dot" role="status" aria-label="System online"></div>
+      </div>
+    </header>
+
+    <!-- ── SIDEBAR NAVIGATION ─────────────────────────────────────── -->
+    <!-- SVG icons: outlined, 18px, currentColor. UX-05 §14. REWORK from emoji. -->
+    <nav class="sidenav" role="navigation" aria-label="Primary navigation">
+      <!-- Command — active -->
+      <a href="#" class="nav-item active" aria-current="page" aria-label="Command">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon points="10,2 12.5,8.5 19,9.5 14.5,14 15.9,20 10,17 4.1,20 5.5,14 1,9.5 7.5,8.5"/>
+        </svg>
+        <span class="nav-label">Command</span>
+      </a>
+      <!-- World -->
+      <a href="#" class="nav-item" aria-label="World">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="10" cy="10" r="8"/>
+          <path d="M2 10h16M10 2a14 14 0 0 1 0 16M10 2a14 14 0 0 0 0 16"/>
+        </svg>
+        <span class="nav-label">World</span>
+      </a>
+      <!-- Decisions -->
+      <a href="#" class="nav-item" aria-label="Decisions">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10 2v16M3 7l7-5 7 5M4 10l6 3 6-3M4 14l6 3 6-3"/>
+        </svg>
+        <span class="nav-label">Decisions</span>
+      </a>
+      <!-- Knowledge -->
+      <a href="#" class="nav-item" aria-label="Knowledge">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 3h9a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H4"/>
+          <path d="M4 3v14a2 2 0 0 0 2 2M7 8h7M7 12h5"/>
+        </svg>
+        <span class="nav-label">Knowledge</span>
+      </a>
+      <!-- System -->
+      <a href="#" class="nav-item" aria-label="System">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2" y="4" width="16" height="12" rx="2"/>
+          <path d="M6 8h8M6 12h5M14 12h1"/>
+          <circle cx="15" cy="8" r="1" fill="currentColor"/>
+        </svg>
+        <span class="nav-label">System</span>
+      </a>
+      <div class="nav-spacer"></div>
+      <div class="nav-version" aria-hidden="true">APEX v10 · UX-06</div>
+    </nav>
+
+    <!-- ── CONTENT AREA ───────────────────────────────────────────── -->
+    <main class="content-area" id="cmd-main" role="main">
+      <div class="cmd-layout" id="orb-shell" class="orb-idle">
+
+        <!-- LEFT ZONE: Orb, Waveform, Stats, Constitution. UX-05 §18.2. -->
+        <section class="cmd-left" aria-label="APEX presence and status">
+
+          <!-- Orb — PROTECT. UX-05 §16. -->
+          <div class="orb-shell orb-idle" id="orb-shell" role="button"
+               tabindex="0" aria-label="APEX presence. State: IDLE. Press Space to activate voice."
+               aria-live="polite">
+            <!-- Pulse rings: 3 concentric. PROTECT. UX-05 §16.2. -->
+            <div class="pulse-ring pr1" aria-hidden="true"></div>
+            <div class="pulse-ring pr2" aria-hidden="true"></div>
+            <div class="pulse-ring pr3" aria-hidden="true"></div>
+            <!-- Orb body -->
+            <div class="orb">
+              <span class="orb-name">APEX</span>
+              <span class="orb-sub" id="orb-sub">STANDBY</span>
+            </div>
+          </div>
+
+          <!-- Waveform: 7 bars exactly. PROTECT. UX-05 §17. -->
+          <div class="waveform" id="waveform" role="status" aria-label="Voice activity" aria-hidden="true">
+            <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+            <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+            <div class="wb"></div>
+          </div>
+
+          <!-- Stat chips × 4. UX-05 §28.8. -->
+          <div class="stat-chips" role="region" aria-label="Key metrics">
+            <div class="stat-chip">
+              <svg class="stat-icon" viewBox="0 0 20 20" fill="none" stroke="var(--apex-color-primary)" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+                <rect x="2" y="5" width="16" height="12" rx="2"/>
+                <path d="M2 9h16M6 13h2M10 13h4"/>
+              </svg>
+              <div class="stat-info">
+                <span class="stat-value">£4,217</span>
+                <span class="stat-label">Balance</span>
+              </div>
+            </div>
+            <div class="stat-chip">
+              <svg class="stat-icon" viewBox="0 0 20 20" fill="none" stroke="var(--apex-color-primary)" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+                <path d="M18 6H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2z"/>
+                <path d="M4 6l8 5 8-5"/>
+              </svg>
+              <div class="stat-info">
+                <span class="stat-value">7</span>
+                <span class="stat-label">Messages</span>
+              </div>
+            </div>
+            <div class="stat-chip">
+              <svg class="stat-icon" viewBox="0 0 20 20" fill="none" stroke="var(--apex-color-primary)" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+                <rect x="3" y="3" width="14" height="14" rx="2"/>
+                <path d="M7 10l2 2 4-4"/>
+              </svg>
+              <div class="stat-info">
+                <span class="stat-value">3</span>
+                <span class="stat-label">Tasks</span>
+              </div>
+            </div>
+            <div class="stat-chip">
+              <svg class="stat-icon" viewBox="0 0 20 20" fill="none" stroke="var(--apex-color-primary)" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+                <path d="M10 3a7 7 0 1 0 0 14A7 7 0 0 0 10 3z"/>
+                <path d="M10 7v3l2 2"/>
+              </svg>
+              <div class="stat-info">
+                <span class="stat-value">98%</span>
+                <span class="stat-label">System</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Constitution Charter A1–A6. PROTECT. UX-05 §22.2. -->
+          <!-- Cinzel used for header label (constitutional context). -->
+          <div class="constitution" role="region" aria-label="Constitutional charter">
+            <div class="constitution-header">Constitution</div>
+            <div class="charter-grid">
+              <div class="charter-article">
+                <div class="charter-id">A1</div>
+                <div class="charter-text">Intelligence serves the human</div>
+              </div>
+              <div class="charter-article">
+                <div class="charter-id">A2</div>
+                <div class="charter-text">Truth above convenience</div>
+              </div>
+              <div class="charter-article">
+                <div class="charter-id">A3</div>
+                <div class="charter-text">Events not polling</div>
+              </div>
+              <div class="charter-article">
+                <div class="charter-id">A4</div>
+                <div class="charter-text">Earn the right to act</div>
+              </div>
+              <div class="charter-article">
+                <div class="charter-id">A5</div>
+                <div class="charter-text">One platform one system</div>
+              </div>
+              <div class="charter-article">
+                <div class="charter-id">A6</div>
+                <div class="charter-text">Human override is absolute</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- RIGHT ZONE: Activity feed + conversation. UX-05 §18.2. -->
+        <section class="cmd-right" aria-label="Activity and conversation">
+
+          <!-- Activity Feed. PROTECT. UX-05 §18.5. -->
+          <div class="panel activity-feed" role="region" aria-label="Live activity feed">
+            <div class="panel-hd">
+              Live Activity
+              <button class="panel-hd-btn" type="button">View all</button>
+            </div>
+            <div class="feed-scroll" aria-live="polite">
+              <div class="feed-item">
+                <div class="feed-dot cyan"></div>
+                <div class="feed-body">
+                  <div class="feed-agent">Finance Agent</div>
+                  <div class="feed-msg">Budget analysis complete — 12% under target</div>
+                </div>
+                <span class="feed-time">09:42</span>
+              </div>
+              <div class="feed-item">
+                <div class="feed-dot amber"></div>
+                <div class="feed-body">
+                  <div class="feed-agent">APEX</div>
+                  <div class="feed-msg">Email draft pending your approval</div>
+                </div>
+                <span class="feed-time">09:37</span>
+              </div>
+              <div class="feed-item">
+                <div class="feed-dot grey"></div>
+                <div class="feed-body">
+                  <div class="feed-agent">System Agent</div>
+                  <div class="feed-msg">Memory indexed: 3 new documents</div>
+                </div>
+                <span class="feed-time">09:21</span>
+              </div>
+              <div class="feed-item">
+                <div class="feed-dot green"></div>
+                <div class="feed-body">
+                  <div class="feed-agent">Finance Agent</div>
+                  <div class="feed-msg">Transaction categorised: Groceries £47.20</div>
+                </div>
+                <span class="feed-time">08:55</span>
+              </div>
+              <div class="feed-item">
+                <div class="feed-dot amber"></div>
+                <div class="feed-body">
+                  <div class="feed-agent">APEX</div>
+                  <div class="feed-msg">Knowledge gap: Health metrics not synced (7d)</div>
+                </div>
+                <span class="feed-time">08:30</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent conversation. UX-05 §18.2. -->
+          <div class="panel" style="flex-shrink:0;" role="region" aria-label="Recent conversation">
+            <div class="panel-hd">Conversation</div>
+            <div class="conv-log" aria-live="polite">
+              <div class="conv-msg user" role="note">What's happening today?</div>
+              <div class="conv-msg ai" role="note">
+                Three items need your attention. Finance is looking strong — you're 12% under budget.
+                There's an email pending review, and I've identified a knowledge gap in health data.
+              </div>
+              <div class="conv-msg user" role="note">Show me the finance details.</div>
+              <div class="typing-indicator" id="typing-indicator" aria-label="APEX is composing a response" style="display:none;">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- PRESENTATION SURFACE — UX-05 §24. Level 3 elevation. -->
+      <!-- Appears adjacent to orb; does not cover orb. Contextual. -->
+      <div class="pres-surface" id="pres-surface" role="dialog"
+           aria-label="Finance Summary" aria-modal="false"
+           tabindex="-1">
+        <div class="pres-hd">
+          <span class="pres-type-badge">SUMMARY</span>
+          <span class="pres-title">Finance Overview — August 2026</span>
+          <button class="pres-close" id="pres-close" aria-label="Dismiss presentation" type="button">✕</button>
+        </div>
+        <div class="pres-body">
+          <div class="pres-stat-row">
+            <div class="pres-stat">
+              <div class="pres-stat-val">£4,217</div>
+              <div class="pres-stat-lbl">Balance</div>
+            </div>
+            <div class="pres-stat">
+              <div class="pres-stat-val" style="color:var(--apex-color-success);">−12%</div>
+              <div class="pres-stat-lbl">vs Budget</div>
+            </div>
+            <div class="pres-stat">
+              <div class="pres-stat-val" style="color:var(--apex-color-warning);">£243</div>
+              <div class="pres-stat-lbl">Pending</div>
+            </div>
+            <div class="pres-stat">
+              <div class="pres-stat-val">£1,840</div>
+              <div class="pres-stat-lbl">Saved</div>
+            </div>
+          </div>
+          <div class="pres-bar-row">
+            <div class="pres-bar-lbl"><span>Housing</span><span>£1,200 / £1,200</span></div>
+            <div class="pres-bar-bg"><div class="pres-bar-fill over" style="width:100%"></div></div>
+          </div>
+          <div class="pres-bar-row">
+            <div class="pres-bar-lbl"><span>Food</span><span>£380 / £500</span></div>
+            <div class="pres-bar-bg"><div class="pres-bar-fill" style="width:76%"></div></div>
+          </div>
+          <div class="pres-bar-row">
+            <div class="pres-bar-lbl"><span>Transport</span><span>£95 / £200</span></div>
+            <div class="pres-bar-bg"><div class="pres-bar-fill" style="width:47%"></div></div>
+          </div>
+          <div class="pres-bar-row">
+            <div class="pres-bar-lbl"><span>Subscriptions</span><span>£82 / £100</span></div>
+            <div class="pres-bar-bg"><div class="pres-bar-fill" style="width:82%"></div></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ── INPUT ZONE — always visible. D-03 resolved. UX-05 §15. ─── -->
+    <div class="input-zone" role="complementary" aria-label="Input and voice controls">
+      <button class="mic-btn" id="mic-btn" type="button"
+              aria-label="Activate voice" aria-pressed="false">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+          <rect x="7" y="2" width="6" height="10" rx="3"/>
+          <path d="M3 11a7 7 0 0 0 14 0M10 18v-3"/>
+        </svg>
+      </button>
+      <input class="chat-input" type="text"
+             id="chat-input"
+             placeholder="Ask APEX…"
+             aria-label="Chat with APEX"
+             autocomplete="off" />
+      <button class="live-pill" id="live-pill" type="button"
+              aria-label="Toggle Gemini Live mode" aria-pressed="false">LIVE</button>
+      <button class="send-btn" type="button" aria-label="Send message">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 10l14-7-7 14v-7H3z"/>
+        </svg>
+      </button>
+    </div>
+  </div><!-- /.app-shell -->
+
+  <!-- ── NOTIFICATION BANNER — UX-05 §25. ─────────────────────────── -->
+  <div class="notify-banner l2" id="notify-banner" role="alert" aria-live="polite"
+       style="display:none;">
+    <div class="notify-row">
+      <svg class="notify-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+        <circle cx="10" cy="10" r="8"/>
+        <path d="M10 6v4M10 14h.01"/>
+      </svg>
+      <div class="notify-body">
+        <div class="notify-cat" id="notify-cat">Finance</div>
+        <div class="notify-subject" id="notify-subject">Budget analysis complete</div>
+        <div class="notify-body-text" id="notify-text">You are 12% under budget for August. Finance Agent recommends reviewing savings allocation.</div>
+        <div class="notify-actions">
+          <button class="notify-btn primary-action" type="button">View details</button>
+          <button class="notify-btn" type="button" id="notify-dismiss">Dismiss</button>
+        </div>
+      </div>
+      <span class="notify-time">Now</span>
+    </div>
+  </div>
+
+  <!-- ── DECISION MODAL — UX-05 §20. ──────────────────────────────── -->
+  <div class="decision-modal" id="decision-modal" role="dialog"
+       aria-modal="true" aria-label="Decision: Approve budget reallocation">
+    <div class="decision-card">
+      <div class="decision-hd">
+        <span class="decision-title">Approve budget reallocation to savings</span>
+        <span class="decision-badge">Pending</span>
+      </div>
+      <p class="decision-summary">
+        Finance Agent proposes moving £400 from the unspent Transport allocation to your savings account.
+        This would bring savings for August to £2,240 — 12% above your monthly target.
+      </p>
+      <!-- Evidence block — UX-05 §28.12 -->
+      <div class="evidence-block">
+        <div class="evidence-source">Finance Agent · budget-analysis-aug-2026</div>
+        <div class="evidence-text">Transport spending is £105 under budget (47% utilisation). Historical pattern shows August transport spend is consistently low. Reallocation opportunity is 92% likely to be beneficial.</div>
+        <div class="evidence-conf">
+          <div class="evidence-conf-bar-bg">
+            <div class="evidence-conf-fill" style="width:92%"></div>
+          </div>
+          <span class="evidence-conf-pct">92%</span>
+        </div>
+      </div>
+      <!-- Decision actions — UX-05 §28.14. Full-width; prominent. -->
+      <div class="decision-actions">
+        <button class="decision-approve" id="decision-approve" type="button">APPROVE</button>
+        <button class="decision-reject" id="decision-reject" type="button">REJECT</button>
+        <div class="decision-secondary">
+          <button class="decision-modify" type="button">MODIFY</button>
+          <button class="decision-defer" id="decision-close" type="button">DEFER</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PROTOTYPE CONTROLS — development tool, desktop only ──────── -->
+  <div class="proto-controls" role="region" aria-label="Prototype state controls (development)">
+    <div class="proto-title">
+      <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="10" cy="10" r="3"/><circle cx="10" cy="10" r="8" stroke-dasharray="3 2"/>
+      </svg>
+      UX-06 PROTOTYPE
+    </div>
+    <!-- Orb state controls -->
+    <div class="proto-section">
+      <div class="proto-section-label">Orb State: <span class="proto-state-display" id="proto-state-label">IDLE</span></div>
+      <div class="proto-btn-grid">
+        <button class="proto-btn active-state" data-state="idle" type="button">IDLE</button>
+        <button class="proto-btn" data-state="activating" type="button">ACTIVATING</button>
+        <button class="proto-btn" data-state="listening" type="button">LISTENING</button>
+        <button class="proto-btn" data-state="understanding" type="button">UNDERSTANDING</button>
+        <button class="proto-btn" data-state="responding" type="button">RESPONDING</button>
+        <button class="proto-btn" data-state="speaking" type="button">SPEAKING</button>
+        <button class="proto-btn" data-state="interrupted" type="button">INTERRUPTED</button>
+        <button class="proto-btn" data-state="paused" type="button">PAUSED</button>
+        <button class="proto-btn" data-state="live" type="button">LIVE</button>
+        <button class="proto-btn" data-state="failed" type="button">FAILED</button>
+        <button class="proto-btn" data-state="cancelled" type="button">CANCELLED</button>
+      </div>
+    </div>
+    <!-- Notification controls -->
+    <div class="proto-section">
+      <div class="proto-section-label">Notification</div>
+      <div class="proto-btn-grid">
+        <button class="proto-btn" data-notify="l2" type="button">L2 Info</button>
+        <button class="proto-btn" data-notify="l3" type="button">L3 Attn</button>
+        <button class="proto-btn" data-notify="l4" type="button">L4 Decision</button>
+        <button class="proto-btn" data-notify="l5" type="button">L5 Urgent</button>
+      </div>
+    </div>
+    <!-- Presentation + Decision controls -->
+    <div class="proto-section">
+      <div class="proto-section-label">Panels</div>
+      <div class="proto-btn-grid">
+        <button class="proto-btn" id="proto-show-pres" type="button">Show Presentation</button>
+        <button class="proto-btn" id="proto-show-decision" type="button">Show Decision</button>
+        <button class="proto-btn" id="proto-typing" type="button">Typing indicator</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ═══════════════════════════════════════════════════════════════════
+       UX-06 PROTOTYPE JAVASCRIPT
+       State management, clock, interaction demos.
+       Evidence: PROPOSED (prototype-specific logic)
+    ═══════════════════════════════════════════════════════════════════ */
+
+    /* ── Clock. UX-05 §4.3 PROTECT. ────────────────────────────────── */
+    function updateClock() {
+      const now = new Date();
+      const t = now.toLocaleTimeString('en-GB', { hour12: false });
+      const d = now.toLocaleDateString('en-GB', { weekday:'short', day:'2-digit', month:'short', year:'numeric' })
+                   .toUpperCase().replace(/,/g, '');
+      document.getElementById('clock-time').textContent = t;
+      document.getElementById('clock-date').textContent = d;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    /* ── Orb state machine. UX-05 §16.3. ───────────────────────────── */
+    const ORB_STATES = {
+      idle:          { sub: 'STANDBY',    ariaLabel: 'IDLE. Press Space to activate voice.' },
+      activating:    { sub: 'WAKING',     ariaLabel: 'ACTIVATING. Starting voice.' },
+      listening:     { sub: 'LISTENING',  ariaLabel: 'LISTENING. Speak now.' },
+      understanding: { sub: 'THINKING',   ariaLabel: 'UNDERSTANDING. Processing your input.' },
+      responding:    { sub: 'RESPONDING', ariaLabel: 'RESPONDING. Preparing reply.' },
+      speaking:      { sub: 'SPEAKING',   ariaLabel: 'SPEAKING. APEX is responding.' },
+      interrupted:   { sub: 'STOPPED',    ariaLabel: 'INTERRUPTED.' },
+      paused:        { sub: 'PAUSED',     ariaLabel: 'PAUSED.' },
+      live:          { sub: 'LIVE',       ariaLabel: 'LIVE mode active.' },
+      failed:        { sub: 'ERROR',      ariaLabel: 'FAILED. Please try again.' },
+      cancelled:     { sub: 'CANCELLED',  ariaLabel: 'CANCELLED.' },
+    };
+
+    const orbEl    = document.getElementById('orb-shell');
+    const orbSub   = document.getElementById('orb-sub');
+    const waveform = document.getElementById('waveform');
+    const liveRegion = document.getElementById('apex-live-region');
+
+    let currentState = 'idle';
+
+    function setOrbState(state) {
+      if (!ORB_STATES[state]) return;
+      // Remove all state classes
+      Object.keys(ORB_STATES).forEach(s => orbEl.classList.remove('orb-' + s));
+      // Apply new state
+      orbEl.classList.add('orb-' + state);
+      orbSub.textContent = ORB_STATES[state].sub;
+      orbEl.setAttribute('aria-label', 'APEX presence. State: ' + ORB_STATES[state].ariaLabel);
+      // Waveform visibility. UX-05 §17.3.
+      const showWave = ['listening', 'speaking', 'live'].includes(state);
+      waveform.classList.toggle('active', showWave);
+      waveform.setAttribute('aria-hidden', showWave ? 'false' : 'true');
+      // Announce state change. UX-05 §33.3.
+      liveRegion.textContent = 'APEX state: ' + state.toUpperCase();
+      // Update prototype controls
+      document.querySelectorAll('.proto-btn[data-state]').forEach(b => {
+        b.classList.toggle('active-state', b.dataset.state === state);
+      });
+      document.getElementById('proto-state-label').textContent = state.toUpperCase();
+      currentState = state;
+    }
+
+    // Orb click/space activation
+    orbEl.addEventListener('click', () => {
+      if (currentState === 'idle') setOrbState('listening');
+      else if (currentState === 'listening') setOrbState('understanding');
+      else setOrbState('idle');
+    });
+    orbEl.addEventListener('keydown', e => {
+      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); orbEl.click(); }
+    });
+
+    // Prototype state buttons
+    document.querySelectorAll('.proto-btn[data-state]').forEach(btn => {
+      btn.addEventListener('click', () => setOrbState(btn.dataset.state));
+    });
+
+    /* ── Notifications. UX-05 §25. ──────────────────────────────────── */
+    const NOTIFY_PRESETS = {
+      l2: {
+        cat: 'Finance', subject: 'Budget analysis complete',
+        text: 'You are 12% under budget for August. Finance Agent recommends reviewing savings allocation.',
+        level: 'l2',
+      },
+      l3: {
+        cat: 'Operations', subject: 'Schedule reminder',
+        text: 'Your 10:00 review is in 15 minutes. Three agenda items prepared by APEX.',
+        level: 'l3',
+      },
+      l4: {
+        cat: 'Decisions · Approval Required', subject: 'Budget reallocation pending',
+        text: 'Finance Agent proposes moving £400 to savings. Your approval is required.',
+        level: 'l4',
+      },
+      l5: {
+        cat: '⚠ URGENT', subject: 'Action required: Unrecognised transaction',
+        text: 'A transaction of £842 from an unknown source requires immediate review.',
+        level: 'l5',
+      },
+    };
+    const notifyBanner  = document.getElementById('notify-banner');
+    const notifyCat     = document.getElementById('notify-cat');
+    const notifySubject = document.getElementById('notify-subject');
+    const notifyText    = document.getElementById('notify-text');
+    const notifyDismiss = document.getElementById('notify-dismiss');
+    let notifyTimer = null;
+
+    function showNotification(preset) {
+      const p = NOTIFY_PRESETS[preset];
+      if (!p) return;
+      notifyCat.textContent     = p.cat;
+      notifySubject.textContent = p.subject;
+      notifyText.textContent    = p.text;
+      notifyBanner.className    = 'notify-banner ' + p.level;
+      notifyBanner.style.display = 'block';
+      // Trigger animation
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => notifyBanner.classList.add('active'));
+      });
+      if (notifyTimer) clearTimeout(notifyTimer);
+      // L5 does not auto-dismiss per UX-04 invariant
+      if (p.level !== 'l5') {
+        notifyTimer = setTimeout(dismissNotification, 6000);
+      }
+    }
+    function dismissNotification() {
+      notifyBanner.classList.remove('active');
+      setTimeout(() => { notifyBanner.style.display = 'none'; }, 220);
+    }
+    notifyDismiss.addEventListener('click', dismissNotification);
+    document.querySelectorAll('.proto-btn[data-notify]').forEach(btn => {
+      btn.addEventListener('click', () => showNotification(btn.dataset.notify));
+    });
+
+    /* ── Presentation surface. UX-05 §24. ──────────────────────────── */
+    const presSurface = document.getElementById('pres-surface');
+    const presClose   = document.getElementById('pres-close');
+
+    function showPresentation() {
+      presSurface.classList.add('active');
+      presSurface.setAttribute('aria-hidden', 'false');
+      liveRegion.textContent = 'APEX is showing Finance Summary presentation.';
+      // Shift to SPEAKING if IDLE to demonstrate V-03 scenario
+      if (currentState === 'idle') setOrbState('speaking');
+    }
+    function hidePresentation() {
+      presSurface.classList.remove('active');
+      presSurface.setAttribute('aria-hidden', 'true');
+      if (currentState === 'speaking') setOrbState('idle');
+    }
+    presClose.addEventListener('click', hidePresentation);
+    document.getElementById('proto-show-pres').addEventListener('click', showPresentation);
+    // ESC to dismiss presentation. UX-05 §30.1.
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        if (presSurface.classList.contains('active')) hidePresentation();
+        if (decisionModal.classList.contains('active')) hideDecision();
+      }
+    });
+
+    /* ── Decision modal. UX-05 §20. ────────────────────────────────── */
+    const decisionModal   = document.getElementById('decision-modal');
+    const decisionApprove = document.getElementById('decision-approve');
+    const decisionReject  = document.getElementById('decision-reject');
+    const decisionClose   = document.getElementById('decision-close');
+
+    function showDecision() {
+      decisionModal.classList.add('active');
+      decisionModal.removeAttribute('aria-hidden');
+      liveRegion.textContent = 'Decision required: Approve budget reallocation.';
+    }
+    function hideDecision() {
+      decisionModal.classList.remove('active');
+      decisionModal.setAttribute('aria-hidden', 'true');
+    }
+    document.getElementById('proto-show-decision').addEventListener('click', showDecision);
+    decisionClose.addEventListener('click', hideDecision);
+    decisionApprove.addEventListener('click', () => {
+      liveRegion.textContent = 'Decision approved. Executing.';
+      hideDecision();
+    });
+    decisionReject.addEventListener('click', () => {
+      liveRegion.textContent = 'Decision rejected.';
+      hideDecision();
+    });
+    // Scrim click to close
+    decisionModal.addEventListener('click', e => { if (e.target === decisionModal) hideDecision(); });
+
+    /* ── Typing indicator. UX-05 §28. ──────────────────────────────── */
+    const typingEl = document.getElementById('typing-indicator');
+    let typingTimer = null;
+    document.getElementById('proto-typing').addEventListener('click', () => {
+      typingEl.style.display = 'flex';
+      if (typingTimer) clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => { typingEl.style.display = 'none'; }, 3000);
+    });
+
+    /* ── Live pill demo. ────────────────────────────────────────────── */
+    const livePill = document.getElementById('live-pill');
+    livePill.addEventListener('click', () => {
+      const isLive = currentState === 'live';
+      setOrbState(isLive ? 'idle' : 'live');
+      livePill.classList.toggle('active', !isLive);
+      livePill.setAttribute('aria-pressed', String(!isLive));
+    });
+
+    /* ── Mic button demo. ───────────────────────────────────────────── */
+    const micBtn = document.getElementById('mic-btn');
+    micBtn.addEventListener('click', () => {
+      const isListening = currentState === 'listening';
+      setOrbState(isListening ? 'idle' : 'listening');
+      micBtn.classList.toggle('active', !isListening);
+      micBtn.setAttribute('aria-pressed', String(!isListening));
+    });
+
+    /* ── Keyboard shortcuts. UX-05 §30.1. PROTECT. ─────────────────── */
+    document.addEventListener('keydown', e => {
+      // / → focus chat input
+      if (e.key === '/' && document.activeElement !== document.getElementById('chat-input')) {
+        e.preventDefault();
+        document.getElementById('chat-input').focus();
+      }
+      // Space → activate orb (when not in input)
+      if (e.key === ' ' && document.activeElement === document.body) {
+        e.preventDefault();
+        orbEl.click();
+      }
+    });
+
+    /* ── Initial state ──────────────────────────────────────────────── */
+    setOrbState('idle');
+    presSurface.setAttribute('aria-hidden', 'true');
+    decisionModal.setAttribute('aria-hidden', 'true');
+  </script>
+</body>
+</html>

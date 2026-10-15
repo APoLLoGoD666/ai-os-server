@@ -1,0 +1,7 @@
+-- Migration 032: INTENTIONAL GAP
+-- This file is a duplicate of migration 028 (028_policy_schema_fix.sql).
+-- Both files contain identical ALTER TABLE statements for cognitive_policy_settings.
+-- Migration 028 is the canonical version. This file is kept as a placeholder to
+-- maintain sequential numbering. All statements use IF NOT EXISTS / IF EXISTS so
+-- running this again is idempotent, but it adds no new schema.
+-- C4 fix: original file renamed from 032_policy_schema_fix.sql to remove confusion.

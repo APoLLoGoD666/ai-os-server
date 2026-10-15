@@ -1,0 +1,9 @@
+domain: DOM-000008
+events:
+  - name: AGENT_COMPLETED
+    from: DOM-000002
+    handler: src/handlers/agent-completed.js
+
+  - name: MIGRATION_ADDED
+    from: DOM-000004
+    handler: src/handlers/migration-added.js

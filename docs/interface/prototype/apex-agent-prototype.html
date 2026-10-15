@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APEX — UX-13 Agents Prototype</title>
+<style>
+:root {
+  --apex-bg-primary: #0a0a0f;
+  --apex-bg-secondary: #111118;
+  --apex-bg-tertiary: #1a1a24;
+  --apex-bg-elevated: #1e1e2e;
+  --apex-bg-glass: rgba(255,255,255,0.03);
+  --apex-text-primary: #e8e8f0;
+  --apex-text-secondary: #9898b0;
+  --apex-text-muted: #5a5a78;
+  --apex-text-accent: #00d4ff;
+  --apex-accent-primary: #00d4ff;
+  --apex-accent-glow: rgba(0,212,255,0.15);
+  --apex-status-success: #10b981;
+  --apex-status-warning: #f59e0b;
+  --apex-status-error: #ef4444;
+  --apex-status-info: #6366f1;
+  --apex-domain-finance: #10b981;
+  --apex-domain-education: #f59e0b;
+  --apex-domain-business: #7c3aed;
+  --apex-domain-system: #64748b;
+  --apex-domain-file: #00d4ff;
+  --apex-agent-pipeline: #6366f1;
+  --apex-task-pending: #5a5a78;
+  --apex-task-running: #00d4ff;
+  --apex-task-waiting: #f59e0b;
+  --apex-task-completed: #10b981;
+  --apex-task-failed: #ef4444;
+  --apex-authority-observe: #5a5a78;
+  --apex-authority-analyse: #6366f1;
+  --apex-authority-recommend: #00d4ff;
+  --apex-authority-propose: #f59e0b;
+  --apex-authority-request: #f97316;
+  --apex-authority-execute: #10b981;
+  --apex-border-subtle: rgba(255,255,255,0.06);
+  --apex-border-active: rgba(0,212,255,0.3);
+  --apex-radius-sm: 6px;
+  --apex-radius-md: 10px;
+  --apex-radius-lg: 16px;
+  --apex-font-ui: 'Inter', system-ui, sans-serif;
+  --apex-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --apex-transition-base: 250ms ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--apex-font-ui);
+  background: var(--apex-bg-primary);
+  color: var(--apex-text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* HEADER */
+.apex-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: var(--apex-bg-secondary);
+  border-bottom: 1px solid var(--apex-border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 48px;
+}
+.apex-wordmark {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--apex-accent-primary);
+  text-transform: uppercase;
+}
+.apex-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.apex-header-tag {
+  font-family: var(--apex-font-mono);
+  font-size: 10px;
+  color: var(--apex-text-muted);
+  letter-spacing: 0.08em;
+}
+.apex-header-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(99,102,241,0.15);
+  color: #818cf8;
+  border: 1px solid rgba(99,102,241,0.3);
+  letter-spacing: 0.06em;
+}
+
+/* LAYOUT */
+.apex-layout {
+  display: flex;
+  height: calc(100vh - 48px - 36px);
+  overflow: hidden;
+}
+
+/* LEFT PANEL */
+.apex-left {
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--apex-bg-secondary);
+  border-right: 1px solid var(--apex-border-subtle);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.apex-left::-webkit-scrollbar { width: 4px; }
+.apex-left::-webkit-scrollbar-thumb { background: var(--apex-border-subtle); border-radius: 2px; }
+
+.panel-section {
+  padding: 12px;
+  border-bottom: 1px solid var(--apex-border-subtle);
+}
+.panel-section-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--apex-text-muted);
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+/* AGENT CARDS */
+.agent-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--apex-radius-md);
+  cursor: pointer;
+  transition: background var(--apex-transition-base);
+  border: 1px solid transparent;
+  margin-bottom: 2px;
+}
+.agent-card:hover { background: var(--apex-bg-glass); }
+.agent-card.active {
+  background: rgba(0,212,255,0.06);
+  border-color: var(--apex-border-active);
+}
+.agent-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.agent-dot.idle { opacity: 0.4; }
+.agent-dot.active-state { animation: pulse-dot 2s infinite; }
+@keyframes pulse-dot {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+.agent-info { flex: 1; min-width: 0; }
+.agent-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--apex-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.agent-role {
+  font-size: 10px;
+  color: var(--apex-text-muted);
+  margin-top: 1px;
+}
+.agent-badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+/* PIPELINE AGENTS */
+.pipeline-agent-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: var(--apex-radius-sm);
+  cursor: pointer;
+  transition: background var(--apex-transition-base);
+  margin-bottom: 1px;
+}
+.pipeline-agent-row:hover { background: var(--apex-bg-glass); }
+.pipeline-agent-row.active { background: rgba(99,102,241,0.08); }
+.pipeline-order {
+  font-family: var(--apex-font-mono);
+  font-size: 9px;
+  color: var(--apex-text-muted);
+  width: 14px;
+  flex-shrink: 0;
+}
+.pipeline-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--apex-text-secondary);
+  flex: 1;
+}
+.pipeline-optional {
+  font-size: 9px;
+  color: var(--apex-text-muted);
+  font-style: italic;
+}
+
+/* CENTRE PANEL */
+.apex-centre {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background: var(--apex-bg-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.apex-centre::-webkit-scrollbar { width: 4px; }
+.apex-centre::-webkit-scrollbar-thumb { background: var(--apex-border-subtle); border-radius: 2px; }
+
+/* TASK CARD */
+.task-card {
+  background: var(--apex-bg-secondary);
+  border: 1px solid var(--apex-border-subtle);
+  border-radius: var(--apex-radius-lg);
+  padding: 16px;
+}
+.task-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.task-goal {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--apex-text-primary);
+  line-height: 1.4;
+}
+.task-id {
+  font-family: var(--apex-font-mono);
+  font-size: 9px;
+  color: var(--apex-text-muted);
+  margin-top: 4px;
+}
+.task-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+  border: 1px solid;
+}
+.task-status-icon { font-size: 11px; }
+.spinning { display: inline-block; animation: spin 1.2s linear infinite; }
+@keyframes spin { 100% { transform: rotate(360deg); } }
+
+/* PIPELINE STRIP */
+.pipeline-strip {
+  display: flex;
+  gap: 0;
+  background: var(--apex-bg-tertiary);
+  border-radius: var(--apex-radius-md);
+  overflow: hidden;
+  border: 1px solid var(--apex-border-subtle);
+}
+.pipeline-stage {
+  flex: 1;
+  padding: 6px 4px;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--apex-text-muted);
+  border-right: 1px solid var(--apex-border-subtle);
+  transition: all var(--apex-transition-base);
+}
+.pipeline-stage:last-child { border-right: none; }
+.pipeline-stage.active { background: rgba(99,102,241,0.12); color: #818cf8; }
+.pipeline-stage.done { color: var(--apex-status-success); }
+
+/* STEP LIST */
+.step-list { display: flex; flex-direction: column; gap: 6px; }
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--apex-bg-tertiary);
+  border-radius: var(--apex-radius-md);
+  border: 1px solid var(--apex-border-subtle);
+  transition: border-color var(--apex-transition-base);
+}
+.step-item.step-active { border-color: var(--apex-border-active); background: rgba(0,212,255,0.04); }
+.step-item.step-waiting { border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.04); }
+.step-item.step-failed { border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.04); }
+.step-item.step-done { opacity: 0.7; }
+.step-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+.step-type { font-family: var(--apex-font-mono); font-size: 11px; color: var(--apex-text-secondary); flex: 1; }
+.step-agent-tag { font-size: 10px; color: var(--apex-text-muted); }
+.step-badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+}
+.auto-badge { background: rgba(99,102,241,0.15); color: #818cf8; }
+.approval-badge { background: rgba(245,158,11,0.15); color: var(--apex-status-warning); }
+.proposed-badge { background: rgba(245,158,11,0.15); color: var(--apex-status-warning); }
+.blocked-badge { background: rgba(239,68,68,0.15); color: var(--apex-status-error); }
+
+/* OUTPUT AREA */
+.output-area {
+  background: var(--apex-bg-secondary);
+  border: 1px solid var(--apex-border-subtle);
+  border-radius: var(--apex-radius-lg);
+  padding: 16px;
+  min-height: 160px;
+}
+.output-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--apex-text-muted);
+  margin-bottom: 12px;
+}
+
+/* BANNER STATES */
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--apex-radius-md);
+  margin-bottom: 12px;
+  border: 1px solid;
+}
+.banner-success { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.3); }
+.banner-warning { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.3); }
+.banner-error { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); }
+.banner-info { background: rgba(99,102,241,0.08); border-color: rgba(99,102,241,0.3); }
+.banner-neutral { background: rgba(100,116,139,0.08); border-color: rgba(100,116,139,0.3); }
+.banner-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.banner-body { flex: 1; }
+.banner-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.04em; }
+.banner-text { font-size: 12px; color: var(--apex-text-secondary); line-height: 1.5; }
+
+/* EVIDENCE PANEL */
+.evidence-panel {
+  background: var(--apex-bg-secondary);
+  border: 1px solid var(--apex-border-subtle);
+  border-radius: var(--apex-radius-lg);
+  overflow: hidden;
+}
+.evidence-header {
+  padding: 10px 14px;
+  background: var(--apex-bg-tertiary);
+  border-bottom: 1px solid var(--apex-border-subtle);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--apex-text-muted);
+}
+.evidence-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--apex-border-subtle);
+  font-size: 11px;
+}
+.evidence-item:last-child { border-bottom: none; }
+.evidence-state {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+.state-known { background: rgba(16,185,129,0.15); color: var(--apex-status-success); }
+.state-inferred { background: rgba(99,102,241,0.15); color: #818cf8; }
+.state-stale { background: rgba(245,158,11,0.15); color: var(--apex-status-warning); }
+.state-missing { background: rgba(239,68,68,0.15); color: var(--apex-status-error); }
+.state-uncertain { background: rgba(245,158,11,0.15); color: var(--apex-status-warning); }
+.state-conflicting { background: rgba(239,68,68,0.15); color: var(--apex-status-error); }
+.evidence-source { color: var(--apex-text-secondary); flex: 1; }
+.evidence-conf { font-family: var(--apex-font-mono); font-size: 10px; color: var(--apex-text-muted); margin-left: auto; }
+
+/* BOUNDARY MARKERS */
+.boundary-marker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: var(--apex-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border: 1px solid;
+  margin: 3px;
+}
+.bm-active { background: rgba(0,212,255,0.1); border-color: var(--apex-border-active); color: var(--apex-accent-primary); }
+.bm-done { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.25); color: var(--apex-status-success); }
+.bm-future { background: var(--apex-bg-glass); border-color: var(--apex-border-subtle); color: var(--apex-text-muted); }
+
+/* IDENTITY CARD */
+.identity-card {
+  background: var(--apex-bg-tertiary);
+  border-radius: var(--apex-radius-md);
+  padding: 16px;
+  border: 1px solid var(--apex-border-subtle);
+}
+.identity-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.identity-avatar {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.identity-name { font-size: 15px; font-weight: 700; }
+.identity-domain { font-size: 11px; color: var(--apex-text-muted); margin-top: 2px; }
+.identity-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--apex-border-subtle);
+  font-size: 11px;
+}
+.identity-key { color: var(--apex-text-muted); width: 90px; flex-shrink: 0; }
+.identity-val { color: var(--apex-text-primary); flex: 1; }
+
+/* TIER LADDER */
+.tier-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: var(--apex-radius-sm);
+  margin-bottom: 3px;
+  transition: all var(--apex-transition-base);
+}
+.tier-row.current { padding-left: 6px; border: 1px solid; }
+.tier-arrow { font-size: 14px; width: 20px; text-align: center; }
+.tier-label { font-size: 11px; font-weight: 600; width: 110px; flex-shrink: 0; }
+.tier-desc { font-size: 10px; color: var(--apex-text-muted); flex: 1; }
+
+/* RIGHT PANEL */
+.apex-right {
+  width: 300px;
+  flex-shrink: 0;
+  background: var(--apex-bg-secondary);
+  border-left: 1px solid var(--apex-border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.right-top {
+  flex: 1;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--apex-border-subtle);
+}
+.right-top::-webkit-scrollbar { width: 4px; }
+.right-top::-webkit-scrollbar-thumb { background: var(--apex-border-subtle); border-radius: 2px; }
+
+.right-bottom {
+  padding: 12px;
+  flex-shrink: 0;
+}
+
+.scenario-list-header {
+  padding: 10px 14px 6px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--apex-text-muted);
+  position: sticky;
+  top: 0;
+  background: var(--apex-bg-secondary);
+  z-index: 2;
+  border-bottom: 1px solid var(--apex-border-subtle);
+}
+.scenario-grid {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.scenario-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--apex-radius-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--apex-text-secondary);
+  cursor: pointer;
+  transition: all var(--apex-transition-base);
+  text-align: left;
+  font-family: var(--apex-font-ui);
+  font-size: 11px;
+}
+.scenario-btn:hover { background: var(--apex-bg-glass); color: var(--apex-text-primary); }
+.scenario-btn.active {
+  background: rgba(0,212,255,0.06);
+  border-color: var(--apex-border-active);
+  color: var(--apex-text-primary);
+}
+.scenario-n {
+  font-family: var(--apex-font-mono);
+  font-size: 9px;
+  color: var(--apex-text-muted);
+  width: 22px;
+  flex-shrink: 0;
+}
+.scenario-key {
+  font-family: var(--apex-font-mono);
+  font-size: 9px;
+  padding: 1px 4px;
+  background: var(--apex-bg-tertiary);
+  border-radius: 3px;
+  color: var(--apex-text-muted);
+  border: 1px solid var(--apex-border-subtle);
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.scenario-label { flex: 1; font-size: 10px; line-height: 1.3; }
+
+/* INSPECTOR */
+.inspector-section {
+  margin-bottom: 10px;
+}
+.inspector-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--apex-text-muted);
+  margin-bottom: 6px;
+}
+.inspector-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--apex-border-subtle);
+  font-size: 11px;
+}
+.inspector-row:last-child { border-bottom: none; }
+.inspector-key { color: var(--apex-text-muted); }
+.inspector-val { color: var(--apex-text-primary); font-weight: 500; }
+.inspector-val.mono { font-family: var(--apex-font-mono); font-size: 10px; }
+
+.boundary-strip { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+
+/* WAVEFORM */
+.waveform {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 20px;
+}
+.waveform__bar {
+  width: 3px;
+  background: var(--apex-accent-primary);
+  border-radius: 2px;
+  animation: wave 0.48s ease-in-out infinite alternate;
+}
+@keyframes wave {
+  from { height: 5px; opacity: 0.5; }
+  to { height: 18px; opacity: 1; }
+}
+
+/* BUTTONS */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--apex-radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--apex-transition-base);
+  border: 1px solid;
+  font-family: var(--apex-font-ui);
+  letter-spacing: 0.04em;
+}
+.btn-success { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.4); color: var(--apex-status-success); }
+.btn-success:hover { background: rgba(16,185,129,0.25); }
+.btn-warning { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.4); color: var(--apex-status-warning); }
+.btn-warning:hover { background: rgba(245,158,11,0.25); }
+.btn-error { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: var(--apex-status-error); }
+.btn-error:hover { background: rgba(239,68,68,0.25); }
+.btn-muted { background: var(--apex-bg-tertiary); border-color: var(--apex-border-subtle); color: var(--apex-text-secondary); }
+.btn-muted:hover { background: var(--apex-bg-elevated); }
+.btn-accent { background: rgba(0,212,255,0.12); border-color: rgba(0,212,255,0.35); color: var(--apex-accent-primary); }
+.btn-accent:hover { background: rgba(0,212,255,0.2); }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* COLUMN GRID */
+.col-grid { display: grid; gap: 10px; }
+.col-2 { grid-template-columns: 1fr 1fr; }
+.col-3 { grid-template-columns: 1fr 1fr 1fr; }
+.col-card {
+  background: var(--apex-bg-tertiary);
+  border-radius: var(--apex-radius-md);
+  padding: 12px;
+  border: 1px solid var(--apex-border-subtle);
+}
+.col-card-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.col-card-body { font-size: 11px; color: var(--apex-text-secondary); line-height: 1.5; }
+
+/* INPUT */
+.inline-input {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+.apex-input {
+  flex: 1;
+  background: var(--apex-bg-elevated);
+  border: 1px solid var(--apex-border-subtle);
+  border-radius: var(--apex-radius-sm);
+  padding: 7px 10px;
+  color: var(--apex-text-primary);
+  font-family: var(--apex-font-ui);
+  font-size: 12px;
+  outline: none;
+  transition: border-color var(--apex-transition-base);
+}
+.apex-input:focus { border-color: var(--apex-border-active); }
+
+/* CAPABILITY LIST */
+.cap-list { display: flex; flex-direction: column; gap: 4px; }
+.cap-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: var(--apex-radius-sm);
+  background: var(--apex-bg-tertiary);
+  font-size: 11px;
+}
+.cap-badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.cap-read { background: rgba(16,185,129,0.12); color: var(--apex-status-success); }
+.cap-write { background: rgba(245,158,11,0.12); color: var(--apex-status-warning); }
+.cap-destructive { background: rgba(239,68,68,0.12); color: var(--apex-status-error); }
+
+/* HISTORY TABLE */
+.history-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+.history-table th {
+  text-align: left;
+  padding: 5px 8px;
+  color: var(--apex-text-muted);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--apex-border-subtle);
+}
+.history-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--apex-border-subtle);
+  color: var(--apex-text-secondary);
+  vertical-align: middle;
+}
+.history-table tr:last-child td { border-bottom: none; }
+
+/* AGENT MULTI */
+.multi-agent-bar {
+  background: var(--apex-bg-tertiary);
+  border-radius: var(--apex-radius-md);
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  border: 1px solid var(--apex-border-subtle);
+}
+.multi-bar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.multi-bar-name { font-size: 12px; font-weight: 600; }
+.multi-bar-status { font-size: 10px; }
+.multi-bar-track {
+  height: 4px;
+  background: var(--apex-bg-elevated);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.multi-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  animation: bar-fill 2s ease-in-out infinite alternate;
+}
+@keyframes bar-fill { from { width: 30%; } to { width: 70%; } }
+
+/* LIFECYCLE */
+.lifecycle-pipeline {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+.lifecycle-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  flex-shrink: 0;
+}
+.lifecycle-node-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  border: 2px solid;
+}
+.lifecycle-node-label { font-size: 9px; font-weight: 600; letter-spacing: 0.04em; }
+.lifecycle-arrow { color: var(--apex-text-muted); font-size: 14px; flex-shrink: 0; }
+
+/* STATS ROW */
+.stats-row { display: flex; gap: 10px; }
+.stat-box {
+  flex: 1;
+  background: var(--apex-bg-tertiary);
+  border-radius: var(--apex-radius-md);
+  padding: 10px 12px;
+  border: 1px solid var(--apex-border-subtle);
+  text-align: center;
+}
+.stat-val { font-size: 18px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.stat-key { font-size: 9px; color: var(--apex-text-muted); letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* LIVE REGION */
+#aria-live { position: absolute; left: -9999px; }
+
+/* FOOTER */
+.apex-footer {
+  height: 36px;
+  background: var(--apex-bg-secondary);
+  border-top: 1px solid var(--apex-border-subtle);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  flex-shrink: 0;
+}
+.footer-text { font-size: 9px; color: var(--apex-text-muted); }
+.footer-bm { font-family: var(--apex-font-mono); font-size: 9px; color: var(--apex-text-muted); }
+.footer-bm.cur { color: var(--apex-accent-primary); }
+
+/* REDUCED MOTION */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* MISC */
+.dimmed { opacity: 0.4; }
+.mono { font-family: var(--apex-font-mono); }
+.text-success { color: var(--apex-status-success); }
+.text-warning { color: var(--apex-status-warning); }
+.text-error { color: var(--apex-status-error); }
+.text-accent { color: var(--apex-accent-primary); }
+.text-muted { color: var(--apex-text-muted); }
+.text-secondary { color: var(--apex-text-secondary); }
+.mt-4 { margin-top: 4px; }
+.mt-8 { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.mb-8 { margin-bottom: 8px; }
+.fw-600 { font-weight: 600; }
+.fs-11 { font-size: 11px; }
+.fs-12 { font-size: 12px; }
+.flex-row { display: flex; align-items: center; gap: 8px; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+.domain-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 3px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.one-apex-frame {
+  border: 1px solid rgba(0,212,255,0.2);
+  border-radius: var(--apex-radius-lg);
+  padding: 16px;
+  background: rgba(0,212,255,0.02);
+}
+.one-apex-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--apex-text-accent);
+  margin-bottom: 12px;
+  text-align: center;
+}
+.agent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.agent-mini-card {
+  background: var(--apex-bg-tertiary);
+  border-radius: var(--apex-radius-md);
+  padding: 10px;
+  border: 1px solid var(--apex-border-subtle);
+  text-align: center;
+  transition: all var(--apex-transition-base);
+}
+.agent-mini-card.highlighted { border-color: var(--apex-border-active); background: rgba(0,212,255,0.04); }
+.agent-mini-card.dimmed-card { opacity: 0.35; }
+.agent-mini-dot { width: 10px; height: 10px; border-radius: 50%; margin: 0 auto 6px; }
+.agent-mini-name { font-size: 11px; font-weight: 600; }
+.agent-mini-role { font-size: 9px; color: var(--apex-text-muted); margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<div id="aria-live" aria-live="polite" aria-atomic="true"></div>
+
+<!-- HEADER -->
+<header class="apex-header">
+  <div class="apex-wordmark">APEX</div>
+  <div class="apex-header-meta">
+    <span class="apex-header-tag">UX-13 AGENTS</span>
+    <span class="apex-header-badge">PROTOTYPE</span>
+    <span class="apex-header-tag" id="active-scenario-tag">No scenario loaded</span>
+  </div>
+</header>
+
+<!-- MAIN LAYOUT -->
+<div class="apex-layout">
+
+  <!-- LEFT: AGENT REGISTRY -->
+  <nav class="apex-left" aria-label="Agent registry">
+    <div class="panel-section">
+      <div class="panel-section-label">Domain Agents</div>
+      <div id="domain-agent-list"></div>
+    </div>
+    <div class="panel-section" style="flex:1">
+      <div class="panel-section-label">Pipeline Agents</div>
+      <div id="pipeline-agent-list"></div>
+    </div>
+  </nav>
+
+  <!-- CENTRE: WORK SURFACE -->
+  <main class="apex-centre" id="work-surface" aria-label="Agent work surface">
+    <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--apex-text-muted);font-size:13px;flex-direction:column;gap:12px;">
+      <div style="font-size:28px;">⬡</div>
+      <div>Select a scenario or press a key to begin</div>
+      <div style="font-size:11px;color:var(--apex-text-muted);">Keys 1–9, 0, q–p, a–l, z–m load scenarios 1–36</div>
+    </div>
+  </main>
+
+  <!-- RIGHT: SCENARIO LIST + INSPECTOR -->
+  <aside class="apex-right" aria-label="Scenario list and inspector">
+    <div class="right-top">
+      <div class="scenario-list-header">Scenarios (45)</div>
+      <div class="scenario-grid" id="scenario-grid"></div>
+    </div>
+    <div class="right-bottom">
+      <div class="inspector-section">
+        <div class="inspector-label">Status Inspector</div>
+        <div id="inspector-content">
+          <div class="inspector-row">
+            <span class="inspector-key">Agent</span>
+            <span class="inspector-val" id="insp-agent">—</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-key">Task status</span>
+            <span class="inspector-val" id="insp-status">—</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-key">Authority</span>
+            <span class="inspector-val mono" id="insp-authority">—</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-key">Domain</span>
+            <span class="inspector-val" id="insp-domain">—</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-key">Scenario</span>
+            <span class="inspector-val mono" id="insp-scenario">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="boundary-strip" id="boundary-strip">
+        <span class="boundary-marker bm-future">[KNOWLEDGE UX-11]</span>
+        <span class="boundary-marker bm-future">[INTELLIGENCE UX-12]</span>
+        <span class="boundary-marker bm-active">[AGENTS UX-13]</span>
+        <span class="boundary-marker bm-future">[→APPROVAL UX-14]</span>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- FOOTER -->
+<footer class="apex-footer">
+  <span class="footer-text">UX-13 AGENTS Prototype — APEX UX Programme. All states simulated. Not production capability.</span>
+  <span class="footer-bm">[KNOWLEDGE UX-11]</span>
+  <span class="footer-bm">[INTELLIGENCE UX-12]</span>
+  <span class="footer-bm cur">[AGENTS UX-13]</span>
+  <span class="footer-bm">[→APPROVAL UX-14]</span>
+  <span class="footer-bm">[→MEMORY UX-15]</span>
+</footer>
+
+<script>
+/* ============================================================
+   DATA
+   ============================================================ */
+const DOMAIN_AGENTS = {
+  system:   { id:'system_agent',   name:'System Agent',     domain:'system',    colour:'#64748b', role:'Infrastructure & Pipeline', purpose:'Manages infrastructure, monitors pipeline health, diagnoses errors.', capabilities:[{n:'infrastructure_monitoring',t:'read'},{n:'pipeline_diagnostics',t:'read'},{n:'cost_analysis',t:'read'},{n:'performance_reporting',t:'read'},{n:'agent_metrics',t:'read'}], safetyLimits:['Cannot change env vars, secrets, GitHub, or code without explicit approval','Must follow safety and autonomy rules'], authorityLevel:'OBSERVE' },
+  file:     { id:'file_agent',     name:'File Agent',       domain:'file',      colour:'#00d4ff', role:'Vault & Knowledge Base',    purpose:'Manages Obsidian vault, documents, storage and knowledge base.', capabilities:[{n:'vault_management',t:'read'},{n:'document_search',t:'read'},{n:'knowledge_base',t:'read'},{n:'file_operations',t:'write'},{n:'link_maintenance',t:'write'}], safetyLimits:['Cannot edit code','Destructive actions require approval'], authorityLevel:'OBSERVE+L3_WRITE' },
+  uni:      { id:'uni_agent',      name:'University Agent', domain:'education', colour:'#f59e0b', role:'Academic Assistant',        purpose:'Academic assistant for coursework, assignments, flashcards and study sessions.', capabilities:[{n:'assignment_tracking',t:'read'},{n:'flashcard_management',t:'write'},{n:'study_sessions',t:'read'},{n:'academic_notes',t:'write'},{n:'rag_query',t:'read'}], safetyLimits:['Cannot fabricate sources','Never invent citations'], authorityLevel:'OBSERVE' },
+  finance:  { id:'finance_agent',  name:'Finance Agent',    domain:'finance',   colour:'#10b981', role:'Budgets & Financial Plans',  purpose:'Handles budgets, finance notes, investing notes and financial planning support.', capabilities:[{n:'budget_analysis',t:'read'},{n:'finance_notes',t:'write'},{n:'investment_notes',t:'write'},{n:'financial_planning_support',t:'read'}], safetyLimits:['Cannot give regulated financial advice','Outputs are educational/planning support only','Label estimates clearly'], authorityLevel:'OBSERVE' },
+  business: { id:'business_agent', name:'Business Agent',   domain:'business',  colour:'#7c3aed', role:'Ideas & Strategy',           purpose:'Handles business ideas, Shopify, pitches, AI services and project plans.', capabilities:[{n:'business_planning',t:'write'},{n:'pitch_development',t:'write'},{n:'shopify_strategy',t:'read'},{n:'project_planning',t:'write'},{n:'market_analysis',t:'read'}], safetyLimits:['Cannot make unsupported claims','Proposals must be realistic and evidence-aware','Flag assumptions clearly'], authorityLevel:'OBSERVE' }
+};
+
+const PIPELINE_AGENTS = [
+  {id:'RESEARCHER', order:0, optional:true,  model:'dynamic', capabilities:['web_search','firecrawl','browser_automation','research']},
+  {id:'ARCHITECT',  order:1, optional:false, model:'dynamic', capabilities:['planning','code_analysis','spec_design','test_case_generation']},
+  {id:'DEVELOPER',  order:2, optional:false, model:'dynamic', capabilities:['code_generation','file_writing','route_creation']},
+  {id:'REVIEWER',   order:3, optional:false, model:'dynamic', capabilities:['code_review','security_audit','owasp_check','stride_audit']},
+  {id:'VALIDATOR',  order:4, optional:false, model:'dynamic', capabilities:['spec_validation','test_case_verification','behavior_check']},
+  {id:'TESTER',     order:5, optional:false, model:'none',    capabilities:['syntax_validation','node_check','static_analysis']},
+  {id:'COMMITTER',  order:6, optional:false, model:'none',    capabilities:['git_commit','git_merge','git_push','render_deploy']},
+  {id:'REFLECTOR',  order:7, optional:false, model:'haiku',   capabilities:['lesson_extraction','self_reflection','vault_write']}
+];
+
+const TASK_STATUS = {
+  pending:          {label:'Pending',           colour:'#5a5a78', icon:'○'},
+  running:          {label:'Working',           colour:'#00d4ff', icon:'⟳', animate:true},
+  waiting_approval: {label:'Awaiting Approval', colour:'#f59e0b', icon:'⏸'},
+  pending_approval: {label:'Plan Ready',        colour:'#f59e0b', icon:'◈'},
+  approved:         {label:'Approved',          colour:'#10b981', icon:'✓'},
+  completed:        {label:'Completed',         colour:'#10b981', icon:'✓'},
+  failed:           {label:'Failed',            colour:'#ef4444', icon:'✗'},
+  cancelled:        {label:'Cancelled',         colour:'#64748b', icon:'×'}
+};
+
+const AUTHORITY_TIERS = [
+  {id:'OBSERVE',          label:'Observe',          colour:'#5a5a78', desc:'Read, list, monitor — no side effects'},
+  {id:'ANALYSE',          label:'Analyse',          colour:'#6366f1', desc:'Interpret observations — no writes'},
+  {id:'RECOMMEND',        label:'Recommend',        colour:'#00d4ff', desc:'Generate recommendation text — no action'},
+  {id:'PROPOSE',          label:'Propose',          colour:'#f59e0b', desc:'Generate formal proposal — not executed'},
+  {id:'REQUEST_APPROVAL', label:'Request Approval', colour:'#f97316', desc:'Submit for human approval'},
+  {id:'EXECUTE',          label:'Execute',          colour:'#10b981', desc:'Execute approved action'}
+];
+
+const SCENARIOS = [
+  {n:1,  key:'1', id:'V-AGENT-01', label:'Agent Identity & Role',       agent:'finance', taskStatus:'pending',          taskGoal:'Show Finance Agent identity',          steps:[], output:'identity'},
+  {n:2,  key:'2', id:'V-AGENT-02', label:'Agent Purpose',               agent:'finance', taskStatus:'pending',          taskGoal:'Domain detected: finance — Finance Agent selected', steps:[], output:'purpose'},
+  {n:3,  key:'3', id:'V-AGENT-03', label:'Agent Capability Visibility', agent:'file',    taskStatus:'pending',          taskGoal:'File Agent capabilities expanded',     steps:[], output:'capabilities'},
+  {n:4,  key:'4', id:'V-AGENT-04', label:'Agent Authority Visibility',  agent:'file',    taskStatus:'pending',          taskGoal:'Authority tier ladder shown',          steps:[], output:'authority'},
+  {n:5,  key:'5', id:'V-AGENT-05', label:'Agent Context',               agent:'finance', taskStatus:'running',          taskGoal:'Agent context card: finance domain',   steps:[], output:'context'},
+  {n:6,  key:'6', id:'V-AGENT-06', label:'Agent Knowledge Access',      agent:'finance', taskStatus:'running',          taskGoal:'Knowledge items consumed',            steps:[], output:'knowledge'},
+  {n:7,  key:'7', id:'V-AGENT-07', label:'Agent Intelligence Input',    agent:'finance', taskStatus:'running',          taskGoal:'Intelligence layer feeding agent',     steps:[], output:'intelligence'},
+  {n:8,  key:'8', id:'V-AGENT-08', label:'Task Creation',               agent:'finance', taskStatus:'pending',          taskGoal:'Summarise monthly budget vs actuals',  steps:[{type:'list_documents',status:'pending'},{type:'search_documents',status:'pending'},{type:'summarize_document',status:'pending'}], output:'created'},
+  {n:9,  key:'9', id:'V-AGENT-09', label:'Task Acceptance',             agent:'finance', taskStatus:'running',          taskGoal:'Summarise monthly budget vs actuals',  steps:[{type:'list_documents',status:'pending'},{type:'search_documents',status:'pending'},{type:'summarize_document',status:'pending'}], output:'accepted'},
+  {n:10, key:'0', id:'V-AGENT-10', label:'Working State',               agent:'finance', taskStatus:'running',          taskGoal:'Summarise monthly budget vs actuals',  steps:[{type:'list_documents',status:'done'},{type:'search_documents',status:'active'},{type:'summarize_document',status:'pending'}], output:'working'},
+  {n:11, key:'q', id:'V-AGENT-11', label:'Waiting State',               agent:'file',    taskStatus:'waiting_approval', taskGoal:'Clean vault — remove stale documents', steps:[{type:'list_documents',status:'done'},{type:'search_documents',status:'done'},{type:'rename_document',status:'waiting',approval:true}], output:'waiting'},
+  {n:12, key:'w', id:'V-AGENT-12', label:'Needs User Input',            agent:'finance', taskStatus:'waiting_approval', taskGoal:'Analyse spending for target month',    steps:[{type:'list_documents',status:'done'},{type:'search_documents',status:'needs_input'}], output:'needs_input'},
+  {n:13, key:'e', id:'V-AGENT-13', label:'Agent Proposal',              agent:'finance', taskStatus:'pending_approval', taskGoal:'Create budget summary document',       steps:[{type:'list_documents',status:'done'},{type:'search_documents',status:'done'},{type:'create_document',status:'proposed'}], output:'proposal'},
+  {n:14, key:'r', id:'V-AGENT-14', label:'Approval-Required Boundary',  agent:'file',    taskStatus:'waiting_approval', taskGoal:'Delete stale vault files',             steps:[{type:'delete_document',status:'blocked_approval'}], output:'approval_boundary'},
+  {n:15, key:'t', id:'V-AGENT-15', label:'Completed Task',              agent:'finance', taskStatus:'completed',        taskGoal:'Summarise monthly budget vs actuals',  steps:[{type:'list_documents',status:'done'},{type:'search_documents',status:'done'},{type:'summarize_document',status:'done'}], output:'completed'},
+  {n:16, key:'y', id:'V-AGENT-16', label:'Failed Task',                 agent:'finance', taskStatus:'failed',           taskGoal:'Summarise monthly budget vs actuals',  steps:[{type:'list_documents',status:'done'},{type:'search_documents',status:'failed'},{type:'summarize_document',status:'pending'}], output:'failed'},
+  {n:17, key:'u', id:'V-AGENT-17', label:'Blocked Task',                agent:'finance', taskStatus:'failed',           taskGoal:'Analyse Q3 expenses',                 steps:[{type:'search_documents',status:'blocked'}], output:'blocked'},
+  {n:18, key:'i', id:'V-AGENT-18', label:'Cancelled Task',              agent:'finance', taskStatus:'cancelled',        taskGoal:'Generate investment report',           steps:[{type:'list_documents',status:'done'},{type:'search_documents',status:'cancelled'}], output:'cancelled'},
+  {n:19, key:'o', id:'V-AGENT-19', label:'User Intervention',           agent:'finance', taskStatus:'running',          taskGoal:'Summarise spending trends',            steps:[{type:'search_documents',status:'active'}], output:'intervention'},
+  {n:20, key:'p', id:'V-AGENT-20', label:'Agent Recovery',              agent:'finance', taskStatus:'running',          taskGoal:'Summarise budget (retry)',             steps:[{type:'list_documents',status:'done'},{type:'search_documents',status:'done'},{type:'summarize_document',status:'active'}], output:'recovery'},
+  {n:21, key:'a', id:'V-AGENT-21', label:'Agent Evidence',              agent:'finance', taskStatus:'completed',        taskGoal:'Budget analysis with evidence',        steps:[{type:'search_documents',status:'done'}], output:'evidence'},
+  {n:22, key:'s', id:'V-AGENT-22', label:'Agent Provenance',            agent:'finance', taskStatus:'completed',        taskGoal:'Budget analysis',                     steps:[{type:'search_documents',status:'done'}], output:'provenance'},
+  {n:23, key:'d', id:'V-AGENT-23', label:'Agent Uncertainty',           agent:'finance', taskStatus:'completed',        taskGoal:'Estimate next quarter spend',          steps:[{type:'search_documents',status:'done'}], output:'uncertainty'},
+  {n:24, key:'f', id:'V-AGENT-24', label:'Agent Recommendation',        agent:'finance', taskStatus:'completed',        taskGoal:'Spending optimisation',               steps:[{type:'search_documents',status:'done'}], output:'recommendation'},
+  {n:25, key:'g', id:'V-AGENT-25', label:'Recommendation vs Execution', agent:'finance', taskStatus:'completed',        taskGoal:'Compare output types',                steps:[], output:'rec_vs_exec'},
+  {n:26, key:'h', id:'V-AGENT-26', label:'Multiple Agents — ONE APEX', agent:'system',  taskStatus:'pending',          taskGoal:'All agents visible under ONE APEX',   steps:[], output:'one_apex'},
+  {n:27, key:'j', id:'V-AGENT-27', label:'Multi-Agent Collaboration',   agent:'system',  taskStatus:'running',          taskGoal:'System health + vault audit (parallel)',steps:[{type:'list_documents',status:'active',agentTag:'System Agent'},{type:'list_files',status:'active',agentTag:'File Agent'}], output:'multi_agent'},
+  {n:28, key:'k', id:'V-AGENT-28', label:'Agent Disagreement',          agent:'system',  taskStatus:'waiting_approval', taskGoal:'Reconcile server cost data',           steps:[], output:'disagreement'},
+  {n:29, key:'l', id:'V-AGENT-29', label:'Domain Agent Experience',     agent:'finance', taskStatus:'pending',          taskGoal:'Finance domain active',               steps:[], output:'domain_agent'},
+  {n:30, key:'z', id:'V-AGENT-30', label:'Cross-Domain Context',        agent:'business',taskStatus:'pending',          taskGoal:'Context switch: finance → business',  steps:[], output:'cross_domain'},
+  {n:31, key:'x', id:'V-AGENT-31', label:'Proactive Communication',     agent:'finance', taskStatus:'completed',        taskGoal:'Budget analysis complete',            steps:[], output:'proactive'},
+  {n:32, key:'c', id:'V-AGENT-32', label:'Voice Agent Interaction',     agent:'finance', taskStatus:'running',          taskGoal:'Summarise monthly budget',            steps:[{type:'search_documents',status:'active'}], output:'voice'},
+  {n:33, key:'v', id:'V-AGENT-33', label:'Personalised Presentation',   agent:'finance', taskStatus:'completed',        taskGoal:'Budget summary (compact mode)',        steps:[], output:'personalised'},
+  {n:34, key:'b', id:'V-AGENT-34', label:'Knowledge→Intelligence→Agent',agent:'finance', taskStatus:'running',          taskGoal:'Show layer boundaries',               steps:[], output:'layer_boundary'},
+  {n:35, key:'n', id:'V-AGENT-35', label:'Agent → Proposal Boundary',   agent:'finance', taskStatus:'pending_approval', taskGoal:'Propose budget document creation',    steps:[{type:'create_document',status:'proposed'}], output:'proposal_boundary'},
+  {n:36, key:'m', id:'V-AGENT-36', label:'Agent → Approval Boundary',   agent:'file',    taskStatus:'waiting_approval', taskGoal:'Delete stale files',                  steps:[{type:'delete_document',status:'blocked_approval'}], output:'approval_ux14'},
+  {n:37, key:null, id:'V-AGENT-37', label:'Cannot Self-Authorise',      agent:'system',  taskStatus:'failed',           taskGoal:'Attempt elevated action',             steps:[], output:'self_auth_denied'},
+  {n:38, key:null, id:'V-AGENT-38', label:'Cannot Bypass Governance',   agent:'system',  taskStatus:'failed',           taskGoal:'Attempt governance bypass',           steps:[], output:'gov_block'},
+  {n:39, key:null, id:'V-AGENT-39', label:'Failure Is Visible',         agent:'finance', taskStatus:'failed',           taskGoal:'Failed search task',                  steps:[{type:'search_documents',status:'failed'}], output:'failure_visible'},
+  {n:40, key:null, id:'V-AGENT-40', label:'Uncertainty Is Visible',     agent:'finance', taskStatus:'completed',        taskGoal:'Inferred-only estimate',              steps:[], output:'uncertainty_visible'},
+  {n:41, key:null, id:'V-AGENT-41', label:'Insufficient Information',   agent:'finance', taskStatus:'failed',           taskGoal:'Analyse missing data',                steps:[{type:'search_documents',status:'blocked'}], output:'insufficient_info'},
+  {n:42, key:null, id:'V-AGENT-42', label:'Conflicting Evidence',       agent:'system',  taskStatus:'waiting_approval', taskGoal:'Reconcile conflicting cost data',      steps:[], output:'conflicting'},
+  {n:43, key:null, id:'V-AGENT-43', label:'Task History',               agent:'finance', taskStatus:'completed',        taskGoal:'View Finance Agent history',           steps:[], output:'history'},
+  {n:44, key:null, id:'V-AGENT-44', label:'Status Transparency',        agent:'finance', taskStatus:'running',          taskGoal:'Full lifecycle visible',              steps:[{type:'search_documents',status:'active'}], output:'lifecycle'},
+  {n:45, key:null, id:'V-AGENT-45', label:'User Cancellation',          agent:'finance', taskStatus:'cancelled',        taskGoal:'Analyse spend (cancelled)',            steps:[{type:'list_documents',status:'done'},{type:'search_documents',status:'cancelled'}], output:'cancelled_by_user'}
+];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let activeScenarioIndex = -1;
+let activeAgentId = null;
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function domainColour(domain) {
+  const map = {finance:'#10b981',education:'#f59e0b',business:'#7c3aed',system:'#64748b',file:'#00d4ff'};
+  return map[domain] || '#5a5a78';
+}
+function agentById(id) {
+  return DOMAIN_AGENTS[id] || null;
+}
+function renderWaveform() {
+  return `<div class="waveform" aria-label="Voice active">${Array.from({length:7},(_,i)=>`<div class="waveform__bar" style="animation-delay:${i*0.06}s"></div>`).join('')}</div>`;
+}
+function stepIcon(status) {
+  const map = {done:'✓',active:'⟳',pending:'○',waiting:'⏸',failed:'✗',blocked:'⛔',proposed:'◈',needs_input:'?',cancelled:'×',blocked_approval:'🔒'};
+  return map[status] || '○';
+}
+function stepColour(status) {
+  const map = {done:'#10b981',active:'#00d4ff',pending:'#5a5a78',waiting:'#f59e0b',failed:'#ef4444',blocked:'#ef4444',proposed:'#f59e0b',needs_input:'#f59e0b',cancelled:'#64748b',blocked_approval:'#ef4444'};
+  return map[status] || '#5a5a78';
+}
+function stepClass(status) {
+  const map = {active:'step-active',waiting:'step-waiting',failed:'step-failed',blocked:'step-failed',blocked_approval:'step-failed',needs_input:'step-waiting',done:'step-done',proposed:'step-waiting'};
+  return map[status] || '';
+}
+function announce(text) {
+  const el = document.getElementById('aria-live');
+  el.textContent = '';
+  setTimeout(() => { el.textContent = text; }, 50);
+}
+
+/* ============================================================
+   RENDER LEFT PANEL
+   ============================================================ */
+function renderLeft() {
+  // Domain agents
+  const dl = document.getElementById('domain-agent-list');
+  dl.innerHTML = Object.entries(DOMAIN_AGENTS).map(([key, ag]) => {
+    const active = activeAgentId === key;
+    const col = ag.colour;
+    return `<div class="agent-card ${active?'active':''}" role="button" tabindex="0" aria-label="Select ${ag.name}" onclick="selectAgent('${key}')" onkeydown="if(event.key==='Enter')selectAgent('${key}')">
+      <div class="agent-dot ${active?'active-state':'idle'}" style="background:${col}"></div>
+      <div class="agent-info">
+        <div class="agent-name">${ag.name}</div>
+        <div class="agent-role">${ag.role}</div>
+      </div>
+      <span class="agent-badge" style="background:${col}22;color:${col};border:1px solid ${col}44">${ag.domain}</span>
+    </div>`;
+  }).join('');
+
+  // Pipeline agents
+  const pl = document.getElementById('pipeline-agent-list');
+  pl.innerHTML = PIPELINE_AGENTS.map(ag => `
+    <div class="pipeline-agent-row" role="button" tabindex="0" aria-label="Pipeline agent ${ag.id}" onclick="selectPipeline('${ag.id}')" onkeydown="if(event.key==='Enter')selectPipeline('${ag.id}')">
+      <span class="pipeline-order">${ag.order}</span>
+      <span class="pipeline-name">${ag.id}</span>
+      ${ag.optional ? '<span class="pipeline-optional">opt</span>' : ''}
+      <span class="agent-badge" style="background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.25)">${ag.model}</span>
+    </div>
+  `).join('');
+}
+
+function selectAgent(key) {
+  activeAgentId = key;
+  renderLeft();
+}
+function selectPipeline(id) {
+  // Show pipeline agent info in centre
+  const ag = PIPELINE_AGENTS.find(p => p.id === id);
+  if (!ag) return;
+  const centre = document.getElementById('work-surface');
+  centre.innerHTML = `
+    <div class="task-card">
+      <div class="task-card-header">
+        <div>
+          <div class="task-goal">${ag.id}</div>
+          <div class="task-id">Pipeline Agent — Order ${ag.order}${ag.optional?' · Optional':''}</div>
+        </div>
+        <span class="task-status-badge" style="color:#818cf8;border-color:rgba(99,102,241,0.3);background:rgba(99,102,241,0.1)">PIPELINE</span>
+      </div>
+      <div class="identity-row"><span class="identity-key">Model</span><span class="identity-val mono">${ag.model}</span></div>
+      <div class="identity-row"><span class="identity-key">Capabilities</span><span class="identity-val">${ag.capabilities.join(', ')}</span></div>
+    </div>
+    <div class="pipeline-strip" aria-label="Pipeline stage">
+      ${PIPELINE_AGENTS.map(p=>`<div class="pipeline-stage ${p.id===ag.id?'active':''}">${p.id}</div>`).join('')}
+    </div>
+  `;
+}
+
+/* ============================================================
+   RENDER SCENARIO LIST
+   ============================================================ */
+function renderScenarioList() {
+  const grid = document.getElementById('scenario-grid');
+  grid.innerHTML = SCENARIOS.map((sc, i) => {
+    const ag = DOMAIN_AGENTS[sc.agent];
+    const col = ag ? ag.colour : '#5a5a78';
+    return `<button class="scenario-btn" id="sbtn-${i}" aria-label="${sc.id}: ${sc.label}" onclick="loadScenario(${i})">
+      <span class="scenario-n">${sc.n}</span>
+      <span class="scenario-key">${sc.key || '—'}</span>
+      <span class="scenario-label">${sc.label}</span>
+      <span style="width:6px;height:6px;border-radius:50%;background:${col};flex-shrink:0"></span>
+    </button>`;
+  }).join('');
+}
+
+/* ============================================================
+   TASK STATUS BADGE HTML
+   ============================================================ */
+function taskStatusBadge(statusKey) {
+  const ts = TASK_STATUS[statusKey] || TASK_STATUS.pending;
+  const icon = ts.animate
+    ? `<span class="spinning task-status-icon">${ts.icon}</span>`
+    : `<span class="task-status-icon">${ts.icon}</span>`;
+  return `<span class="task-status-badge" style="color:${ts.colour};border-color:${ts.colour}44;background:${ts.colour}18" aria-label="Status: ${ts.label}">${icon} ${ts.label}</span>`;
+}
+
+/* ============================================================
+   STEP LIST HTML
+   ============================================================ */
+function renderStepList(steps) {
+  if (!steps || steps.length === 0) return '';
+  return `<div class="step-list" role="list" aria-label="Task steps">
+    ${steps.map((s,i) => {
+      const col = stepColour(s.status);
+      const cls = stepClass(s.status);
+      const isSpinning = s.status === 'active';
+      const iconHtml = isSpinning
+        ? `<span class="spinning" style="color:${col}">${stepIcon(s.status)}</span>`
+        : `<span style="color:${col}">${stepIcon(s.status)}</span>`;
+      let badge = '';
+      if (s.status === 'waiting' || s.status === 'blocked_approval') badge = '<span class="step-badge approval-badge">APPROVAL</span>';
+      else if (s.status === 'proposed') badge = '<span class="step-badge proposed-badge">PROPOSED</span>';
+      else if (s.status === 'blocked') badge = '<span class="step-badge blocked-badge">BLOCKED</span>';
+      else if (s.status === 'active' || s.status === 'done') badge = '<span class="step-badge auto-badge">AUTO</span>';
+      return `<div class="step-item ${cls}" role="listitem">
+        <span class="step-icon">${iconHtml}</span>
+        <span class="step-type">${s.type}</span>
+        ${s.agentTag ? `<span class="step-agent-tag">${s.agentTag}</span>` : ''}
+        ${badge}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+/* ============================================================
+   OUTPUT RENDERERS
+   ============================================================ */
+function renderOutput(sc) {
+  const ag = DOMAIN_AGENTS[sc.agent] || DOMAIN_AGENTS.finance;
+  const col = ag.colour;
+
+  switch (sc.output) {
+
+    case 'identity':
+      return `<div class="identity-card">
+        <div class="identity-header">
+          <div class="identity-avatar" style="background:${col}22;border:1px solid ${col}44">
+            <span style="font-size:20px">${ag.domain==='finance'?'💹':ag.domain==='file'?'📂':ag.domain==='education'?'🎓':ag.domain==='business'?'💼':'⚙️'}</span>
+          </div>
+          <div>
+            <div class="identity-name" style="color:${col}">${ag.name}</div>
+            <div class="identity-domain">${ag.role}</div>
+          </div>
+          <span class="domain-badge" style="background:${col}22;color:${col};border:1px solid ${col}44;margin-left:auto">${ag.domain.toUpperCase()}</span>
+        </div>
+        <div class="identity-row"><span class="identity-key">Purpose</span><span class="identity-val">${ag.purpose}</span></div>
+        <div class="identity-row"><span class="identity-key">Authority</span><span class="identity-val"><span class="boundary-marker bm-active">${ag.authorityLevel}</span></span></div>
+        <div class="identity-row"><span class="identity-key">Category</span><span class="identity-val"><span class="tag" style="background:rgba(99,102,241,0.12);color:#818cf8">DOMAIN AGENT</span></span></div>
+        <div class="identity-row"><span class="identity-key">ID</span><span class="identity-val mono fs-11">${ag.id}</span></div>
+      </div>`;
+
+    case 'purpose':
+      return `<div class="col-card mb-8">
+        <div class="col-card-title text-muted">Domain Detection Flow</div>
+        <div class="flex-row mt-4" style="gap:6px;flex-wrap:wrap">
+          <div style="background:var(--apex-bg-elevated);border-radius:6px;padding:6px 12px;font-size:11px">User text input</div>
+          <span style="color:var(--apex-text-muted)">→</span>
+          <div style="background:var(--apex-bg-elevated);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--apex-font-mono)">detectDomain()</div>
+          <span style="color:var(--apex-text-muted)">→</span>
+          <div style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:6px;padding:6px 12px;font-size:11px;color:#10b981;font-weight:600">'finance'</div>
+          <span style="color:var(--apex-text-muted)">→</span>
+          <div style="background:rgba(16,185,129,0.08);border-radius:6px;padding:6px 12px;font-size:11px;color:#10b981">Finance Agent selected</div>
+        </div>
+      </div>
+      <div class="identity-card mt-8">
+        <div class="identity-row" style="border:none;padding-top:0"><span class="identity-key">Agent selected</span><span class="identity-val fw-600" style="color:${col}">${ag.name}</span></div>
+        <div class="identity-row"><span class="identity-key">Reason</span><span class="identity-val">Domain keyword match: budget, spending, finance</span></div>
+        <div class="identity-row"><span class="identity-key">Confidence</span><span class="identity-val text-success">HIGH</span></div>
+      </div>`;
+
+    case 'capabilities':
+      return `<div class="cap-list">
+        ${ag.capabilities.map(c => `<div class="cap-item">
+          <span style="font-family:var(--apex-font-mono);font-size:11px">${c.n}</span>
+          <span class="cap-badge ${c.t==='read'?'cap-read':c.t==='write'?'cap-write':'cap-destructive'}">${c.t.toUpperCase()}</span>
+        </div>`).join('')}
+      </div>
+      <div class="mt-8 fs-11 text-muted">Safety limits: ${ag.safetyLimits.join(' · ')}</div>`;
+
+    case 'authority':
+      return `<div>${AUTHORITY_TIERS.map((t,i) => {
+        const isCurrent = ag.authorityLevel.startsWith(t.id);
+        return `<div class="tier-row ${isCurrent?'current':''}" style="${isCurrent?`border-color:${t.colour}44;background:${t.colour}0f`:''}" >
+          <span class="tier-arrow" style="color:${t.colour}">${isCurrent?'▶':'  '}</span>
+          <span class="tier-label" style="color:${isCurrent?t.colour:'var(--apex-text-muted)'}">${t.label}</span>
+          <span class="tier-desc">${t.desc}</span>
+        </div>`;
+      }).join('')}</div>
+      <div class="mt-8 fs-11 text-muted">Current authority: <span class="mono" style="color:${col}">${ag.authorityLevel}</span></div>`;
+
+    case 'context':
+      return `<div class="identity-card">
+        <div class="col-card-title text-muted mb-8">Agent Context Card</div>
+        <div class="identity-row"><span class="identity-key">Domain</span><span class="identity-val" style="color:${col}">${ag.domain}</span></div>
+        <div class="identity-row"><span class="identity-key">Knowledge state</span><span class="identity-val"><span class="evidence-state state-known">LOADED</span></span></div>
+        <div class="identity-row"><span class="identity-key">Intelligence</span><span class="identity-val"><span class="evidence-state state-inferred">2 items</span></span></div>
+        <div class="identity-row"><span class="identity-key">Memory refs</span><span class="identity-val mono fs-11">Finance/Budget.md, Finance/Notes.md</span></div>
+        <div class="identity-row"><span class="identity-key">Session</span><span class="identity-val mono fs-11">sess_f1a2b3c4</span></div>
+        <div class="identity-row"><span class="identity-key">Authority</span><span class="identity-val"><span class="boundary-marker bm-active">${ag.authorityLevel}</span></span></div>
+      </div>`;
+
+    case 'knowledge':
+      return `<div class="fs-11 text-muted mb-8">Boundary: <span class="boundary-marker bm-done">[KNOWLEDGE INPUT UX-11]</span></div>
+      <div class="evidence-panel">
+        <div class="evidence-header">Knowledge Items Consumed</div>
+        <div class="evidence-item"><span class="evidence-state state-known">KNOWN</span><span class="evidence-source">Finance/Budget-January-2026.md</span><span class="evidence-conf">100%</span></div>
+        <div class="evidence-item"><span class="evidence-state state-stale">STALE</span><span class="evidence-source">Finance/Budget-December-2025.md · Updated 90d ago</span><span class="evidence-conf">60%</span></div>
+        <div class="evidence-item"><span class="evidence-state state-missing">MISSING</span><span class="evidence-source">Finance/Actuals-February-2026.md · Not found in vault</span><span class="evidence-conf">0%</span></div>
+      </div>`;
+
+    case 'intelligence':
+      return `<div class="fs-11 text-muted mb-8">Boundary: <span class="boundary-marker bm-done">[INTELLIGENCE INPUT UX-12]</span></div>
+      <div class="evidence-panel">
+        <div class="evidence-header">Intelligence Items</div>
+        <div class="evidence-item"><span class="evidence-state state-inferred">INFERRED</span><span class="evidence-source">RISK — Dining spend 34% above 90-day average</span><span style="color:#ef4444;font-size:10px">HIGH</span></div>
+        <div class="evidence-item"><span class="evidence-state state-inferred">INFERRED</span><span class="evidence-source">FORECAST — Q1 overspend projected if trend continues</span><span style="color:#f59e0b;font-size:10px">AMBER</span></div>
+      </div>
+      <div class="mt-8 banner banner-info">
+        <span class="banner-icon">ℹ</span>
+        <div class="banner-body"><div class="banner-text">Intelligence layer delivers INFERRED items only. No KNOWN confirmation available. Agent labels outputs accordingly.</div></div>
+      </div>`;
+
+    case 'created':
+      return `<div class="banner banner-info">
+        <span class="banner-icon">○</span>
+        <div class="banner-body">
+          <div class="banner-title" style="color:var(--apex-task-pending)">TASK CREATED</div>
+          <div class="banner-text">Status: PENDING · Agent: ${ag.name} · Waiting to start.</div>
+        </div>
+      </div>
+      <div class="identity-row"><span class="identity-key">Goal</span><span class="identity-val">${sc.taskGoal}</span></div>
+      <div class="identity-row"><span class="identity-key">Steps queued</span><span class="identity-val">3</span></div>
+      <div class="identity-row"><span class="identity-key">Auto-execute</span><span class="identity-val">Yes — OBSERVE authority</span></div>`;
+
+    case 'accepted':
+      return `<div class="banner banner-info" style="border-color:rgba(0,212,255,0.3);background:rgba(0,212,255,0.06)">
+        <span class="banner-icon" style="color:var(--apex-accent-primary)">⟳</span>
+        <div class="banner-body">
+          <div class="banner-title" style="color:var(--apex-accent-primary)">TASK ACCEPTED</div>
+          <div class="banner-text">Plan generated. 3 steps queued. Status: RUNNING.</div>
+        </div>
+      </div>`;
+
+    case 'working':
+      return `<div class="stats-row mb-8">
+        <div class="stat-box"><div class="stat-val text-success">1</div><div class="stat-key">Done</div></div>
+        <div class="stat-box"><div class="stat-val text-accent">1</div><div class="stat-key">Running</div></div>
+        <div class="stat-box"><div class="stat-val text-muted">1</div><div class="stat-key">Pending</div></div>
+        <div class="stat-box"><div class="stat-val text-secondary mono" style="font-size:14px">4s</div><div class="stat-key">Elapsed</div></div>
+      </div>
+      ${renderStepList(sc.steps)}`;
+
+    case 'waiting':
+      return `<div class="banner banner-warning">
+        <span class="banner-icon">⏸</span>
+        <div class="banner-body">
+          <div class="banner-title text-warning">APPROVAL REQUIRED</div>
+          <div class="banner-text">rename_document is a destructive action.<br>Autonomy Level 1: all destructive steps require human approval.</div>
+        </div>
+      </div>
+      ${renderStepList(sc.steps)}
+      <div class="btn-row"><button class="btn btn-success" aria-label="Approve rename">✓ Approve Rename</button><button class="btn btn-error" aria-label="Reject rename">✗ Reject</button></div>`;
+
+    case 'needs_input':
+      return `<div class="banner banner-warning">
+        <span class="banner-icon">?</span>
+        <div class="banner-body">
+          <div class="banner-title text-warning">AGENT NEEDS INFORMATION</div>
+          <div class="banner-text">Which month should be analysed?</div>
+        </div>
+      </div>
+      <div class="inline-input mt-8">
+        <input class="apex-input" type="text" placeholder="e.g. January or February" aria-label="Month input" />
+        <button class="btn btn-accent" aria-label="Submit answer">SUBMIT</button>
+      </div>`;
+
+    case 'proposal':
+      return `<div class="banner banner-warning">
+        <span class="banner-icon">◈</span>
+        <div class="banner-body">
+          <div class="banner-title text-warning">PROPOSAL GENERATED</div>
+          <div class="banner-text">Agent proposes: Create <span class="mono">'Budget Summary January 2026.md'</span><br><span style="opacity:.7;font-size:10px">NOT YET EXECUTED — this is a proposal only.</span></div>
+        </div>
+      </div>
+      ${renderStepList(sc.steps)}
+      <div class="btn-row"><button class="btn btn-success" aria-label="Approve proposal">✓ APPROVE</button><button class="btn btn-error" aria-label="Decline proposal">✗ DECLINE</button></div>`;
+
+    case 'approval_boundary':
+      return `<div class="banner banner-neutral">
+        <span class="banner-icon">🔒</span>
+        <div class="banner-body">
+          <div class="banner-title">APPROVAL BOUNDARY REACHED</div>
+          <div class="banner-text">This action requires formal approval. Execution is outside UX-13 scope.</div>
+        </div>
+      </div>
+      <div class="mt-8 fs-11 text-muted">Boundary marker:</div>
+      <div class="mt-4"><span class="boundary-marker bm-future">[→APPROVAL UX-14]</span></div>
+      ${renderStepList(sc.steps)}`;
+
+    case 'completed':
+      return `<div class="banner banner-success">
+        <span class="banner-icon">✓</span>
+        <div class="banner-body">
+          <div class="banner-title text-success">COMPLETED</div>
+          <div class="banner-text">Budget analysis complete. January 2026 overspend: £142. Top category: dining (£287).</div>
+        </div>
+      </div>
+      <div class="stats-row mt-8">
+        <div class="stat-box"><div class="stat-val text-success">3/3</div><div class="stat-key">Steps done</div></div>
+        <div class="stat-box"><div class="stat-val text-secondary mono" style="font-size:14px">4.2s</div><div class="stat-key">Duration</div></div>
+      </div>
+      ${renderStepList(sc.steps)}`;
+
+    case 'failed':
+      return `<div class="banner banner-error">
+        <span class="banner-icon">✗</span>
+        <div class="banner-body">
+          <div class="banner-title text-error">FAILED</div>
+          <div class="banner-text">Document not found: <span class="mono">budgets/january-2026.md</span><br>Step 2 marked ✗</div>
+        </div>
+      </div>
+      ${renderStepList(sc.steps)}
+      <div class="btn-row"><button class="btn btn-accent" aria-label="Retry task">↺ RETRY</button></div>`;
+
+    case 'blocked':
+      return `<div class="banner banner-error">
+        <span class="banner-icon">⛔</span>
+        <div class="banner-body">
+          <div class="banner-title text-error">BLOCKED</div>
+          <div class="banner-text">Blocker: INSUFFICIENT_INFORMATION<br>Required document missing from vault. Cannot proceed.</div>
+        </div>
+      </div>
+      ${renderStepList(sc.steps)}`;
+
+    case 'cancelled':
+      return `<div class="banner banner-neutral">
+        <span class="banner-icon">×</span>
+        <div class="banner-body">
+          <div class="banner-title" style="color:#64748b">CANCELLED</div>
+          <div class="banner-text">Task cancelled by user at step 2 of 4. Step 1 completed, step 2 aborted.</div>
+        </div>
+      </div>
+      ${renderStepList(sc.steps)}`;
+
+    case 'intervention':
+      return `<div class="col-card mb-8">
+        <div class="col-card-title text-muted">User Intervention Controls</div>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn btn-warning" aria-label="Pause task">⏸ PAUSE</button>
+          <button class="btn btn-success" aria-label="Resume task">▶ RESUME</button>
+          <button class="btn btn-error" aria-label="Cancel task">× CANCEL</button>
+          <button class="btn btn-accent" aria-label="Provide input">✎ PROVIDE INPUT</button>
+          <button class="btn btn-muted" aria-label="Redirect task">↗ REDIRECT</button>
+        </div>
+      </div>
+      ${renderStepList(sc.steps)}`;
+
+    case 'recovery':
+      return `<div class="banner banner-success">
+        <span class="banner-icon">↺</span>
+        <div class="banner-body">
+          <div class="banner-title text-success">RECOVERY SUCCESSFUL</div>
+          <div class="banner-text">RETRY executed. Transition: FAILED → RUNNING → COMPLETED. Recovery at retry 1.</div>
+        </div>
+      </div>
+      <div class="flex-row mt-8" style="gap:6px">
+        <span style="color:#ef4444;font-size:11px;font-weight:600">FAILED</span>
+        <span class="text-muted">→</span>
+        <span style="color:#00d4ff;font-size:11px;font-weight:600">RUNNING</span>
+        <span class="text-muted">→</span>
+        <span style="color:#10b981;font-size:11px;font-weight:600">COMPLETED</span>
+      </div>
+      ${renderStepList(sc.steps)}`;
+
+    case 'evidence':
+      return `<div class="evidence-panel">
+        <div class="evidence-header">Evidence Panel</div>
+        <div class="evidence-item"><span class="evidence-state state-known">KNOWN</span><span class="evidence-source">Finance/Budget-January-2026.md</span><span class="evidence-conf">100%</span></div>
+        <div class="evidence-item"><span class="evidence-state state-known">KNOWN</span><span class="evidence-source">Finance/Actuals-January-2026.md</span><span class="evidence-conf">100%</span></div>
+        <div class="evidence-item"><span class="evidence-state state-inferred">INFERRED</span><span class="evidence-source">RISK — Dining overspend · Intelligence layer</span><span class="evidence-conf">72%</span></div>
+      </div>`;
+
+    case 'provenance':
+      return `<div class="identity-card">
+        <div class="col-card-title text-muted mb-8">T3 Provenance Chain</div>
+        <div class="identity-row"><span class="identity-key">Source</span><span class="identity-val">Obsidian vault</span></div>
+        <div class="identity-row"><span class="identity-key">File</span><span class="identity-val mono fs-11">Finance/Budget.md</span></div>
+        <div class="identity-row"><span class="identity-key">Updated</span><span class="identity-val">2026-08-20</span></div>
+        <div class="identity-row"><span class="identity-key">Ingested</span><span class="identity-val">2026-08-25</span></div>
+        <div class="identity-row"><span class="identity-key">Knowledge state</span><span class="identity-val"><span class="evidence-state state-stale">STALE</span></span></div>
+      </div>`;
+
+    case 'uncertainty':
+      return `<div class="banner banner-warning">
+        <span class="banner-icon">◎</span>
+        <div class="banner-body">
+          <div class="banner-title text-warning">UNCERTAIN</div>
+          <div class="banner-text">Evidence is INFERRED only — no KNOWN confirmation.<br>Confidence: insufficient.<br><span class="mono fs-11">INV-AGENT-INFERRED: INFERRED alone → UNCERTAIN</span></div>
+        </div>
+      </div>`;
+
+    case 'recommendation':
+      return `<div class="banner" style="border-color:rgba(0,212,255,0.3);background:rgba(0,212,255,0.06)">
+        <span class="banner-icon text-accent">◎</span>
+        <div class="banner-body">
+          <div class="banner-title text-accent">RECOMMENDATION</div>
+          <div class="banner-text">Consider reallocating £200 from entertainment to emergency fund.<br><span class="tag" style="background:rgba(0,212,255,0.1);color:var(--apex-accent-primary);margin-top:6px;display:inline-flex">RECOMMENDATION — not proposal, not execution</span></div>
+        </div>
+      </div>`;
+
+    case 'rec_vs_exec':
+      return `<div class="col-grid col-3">
+        <div class="col-card" style="border-color:rgba(0,212,255,0.2)">
+          <div class="col-card-title" style="color:var(--apex-accent-primary)">RECOMMENDATION</div>
+          <div class="col-card-body">Text output only. No action taken. Labelled RECOMMENDATION. Agent authority: RECOMMEND.</div>
+        </div>
+        <div class="col-card" style="border-color:rgba(245,158,11,0.2)">
+          <div class="col-card-title text-warning">PROPOSAL</div>
+          <div class="col-card-body">Formal proposal generated. Awaiting human approval. NOT executed.</div>
+        </div>
+        <div class="col-card" style="border-color:rgba(16,185,129,0.2)">
+          <div class="col-card-title text-success">EXECUTED</div>
+          <div class="col-card-body">Action completed after approval. Audit trail written. Outcome confirmed.</div>
+        </div>
+      </div>`;
+
+    case 'one_apex':
+      return `<div class="one-apex-frame">
+        <div class="one-apex-title">ONE APEX — Multiple Specialised Capabilities</div>
+        <div class="agent-grid">
+          ${Object.entries(DOMAIN_AGENTS).map(([k,a]) => `<div class="agent-mini-card">
+            <div class="agent-mini-dot" style="background:${a.colour}"></div>
+            <div class="agent-mini-name" style="color:${a.colour}">${a.name}</div>
+            <div class="agent-mini-role">${a.role}</div>
+          </div>`).join('')}
+        </div>
+        <div class="mt-8 fs-11 text-muted text-center" style="text-align:center">Constitutional hierarchy governs all agents equally.</div>
+      </div>`;
+
+    case 'multi_agent':
+      return `<div class="fs-11 text-muted mb-8">DEFAULT_CONCURRENCY=2 · Parallel execution</div>
+      <div class="multi-agent-bar">
+        <div class="multi-bar-header">
+          <span class="multi-bar-name" style="color:#64748b">System Agent</span>
+          <span class="multi-bar-status text-accent">list_documents · ACTIVE</span>
+        </div>
+        <div class="multi-bar-track"><div class="multi-bar-fill" style="background:#64748b"></div></div>
+      </div>
+      <div class="multi-agent-bar">
+        <div class="multi-bar-header">
+          <span class="multi-bar-name" style="color:#00d4ff">File Agent</span>
+          <span class="multi-bar-status text-accent">list_files · ACTIVE</span>
+        </div>
+        <div class="multi-bar-track"><div class="multi-bar-fill" style="background:#00d4ff;animation-delay:0.3s"></div></div>
+      </div>
+      <div class="col-card mt-8">
+        <div class="col-card-title text-muted">Synthesis</div>
+        <div class="col-card-body">Awaiting both agents. Results will be merged into single output.</div>
+      </div>`;
+
+    case 'disagreement':
+      return `<div class="banner banner-error">
+        <span class="banner-icon">⚠</span>
+        <div class="banner-body">
+          <div class="banner-title text-error">CONFLICTING DATA</div>
+          <div class="banner-text">Sources disagree. Neither selected as authoritative. User resolution required.</div>
+        </div>
+      </div>
+      <div class="evidence-panel mt-8">
+        <div class="evidence-header">Conflicting Sources</div>
+        <div class="evidence-item"><span class="evidence-state state-inferred">System Agent</span><span class="evidence-source">Server cost: £42/month</span><span class="evidence-conf">?</span></div>
+        <div class="evidence-item"><span class="evidence-state state-inferred">File Agent</span><span class="evidence-source">Server cost: £67/month</span><span class="evidence-conf">?</span></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-muted" aria-label="Select system agent value">Use £42</button><button class="btn btn-muted" aria-label="Select file agent value">Use £67</button><button class="btn btn-accent" aria-label="Investigate further">Investigate</button></div>`;
+
+    case 'domain_agent':
+      return `<div class="one-apex-frame">
+        <div class="one-apex-title" style="color:#10b981">FINANCE DOMAIN ACTIVE</div>
+        <div class="agent-grid">
+          ${Object.entries(DOMAIN_AGENTS).map(([k,a]) => `<div class="agent-mini-card ${k==='finance'?'highlighted':'dimmed-card'}">
+            <div class="agent-mini-dot" style="background:${a.colour}"></div>
+            <div class="agent-mini-name" style="color:${a.colour}">${a.name}</div>
+            <div class="agent-mini-role">${a.role}</div>
+          </div>`).join('')}
+        </div>
+        <div class="mt-8 fs-11" style="color:#10b981;text-align:center">Finance Agent active. All others on standby within ONE APEX.</div>
+      </div>`;
+
+    case 'cross_domain':
+      return `<div class="col-card mb-8">
+        <div class="col-card-title text-muted">Context Bridge</div>
+        <div class="flex-row mt-4" style="gap:8px">
+          <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:6px;padding:6px 12px;font-size:11px;color:#10b981">Finance <span class="mono" style="font-size:9px">PRESERVED</span></div>
+          <span style="font-size:16px;color:var(--apex-text-muted)">→</span>
+          <div style="background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.3);border-radius:6px;padding:6px 12px;font-size:11px;color:#7c3aed;font-weight:600">Business <span class="mono" style="font-size:9px">ACTIVE</span></div>
+        </div>
+      </div>
+      <div class="one-apex-frame">
+        <div class="one-apex-title" style="color:#7c3aed">BUSINESS DOMAIN ACTIVE</div>
+        <div class="agent-grid">
+          ${Object.entries(DOMAIN_AGENTS).map(([k,a]) => `<div class="agent-mini-card ${k==='business'?'highlighted':'dimmed-card'}" style="${k==='business'?'border-color:rgba(124,58,237,0.4);background:rgba(124,58,237,0.06)':''}">
+            <div class="agent-mini-dot" style="background:${a.colour}"></div>
+            <div class="agent-mini-name" style="color:${a.colour}">${a.name}</div>
+          </div>`).join('')}
+        </div>
+      </div>`;
+
+    case 'proactive':
+      return `<div class="banner" style="border-color:rgba(99,102,241,0.3);background:rgba(99,102,241,0.06)">
+        <span class="banner-icon" style="color:#818cf8">🔔</span>
+        <div class="banner-body">
+          <div class="banner-title" style="color:#818cf8">PROACTIVE NOTIFICATION · Attention L2</div>
+          <div class="banner-text"><strong>Finance Agent:</strong> January analysis complete. Overspend detected — £142. Review recommended.</div>
+          <div class="mt-4 mono" style="font-size:9px;color:var(--apex-text-muted)">2026-08-28 · 14:32:07 · UX-09 notification system</div>
+        </div>
+      </div>`;
+
+    case 'voice':
+      return `<div class="col-card">
+        <div class="flex-between mb-8">
+          <div class="col-card-title" style="color:var(--apex-accent-primary)">VOICE STATE: LISTENING</div>
+          ${renderWaveform()}
+        </div>
+        <div class="identity-row"><span class="identity-key">Query</span><span class="identity-val">"What are you working on?"</span></div>
+        <div class="identity-row"><span class="identity-key">Response</span><span class="identity-val">"Summarising your January budget. Step 2 of 3 — searching documents."</span></div>
+        <div class="identity-row"><span class="identity-key">UX ref</span><span class="identity-val mono fs-11">UX-07 waveform · INV-VS-14/15</span></div>
+      </div>
+      ${renderStepList(sc.steps)}`;
+
+    case 'personalised':
+      return `<div class="banner" style="border-color:rgba(0,212,255,0.2);background:rgba(0,212,255,0.04)">
+        <span class="banner-icon text-muted">◎</span>
+        <div class="banner-body">
+          <div class="banner-title text-muted">Detail mode: COMPACT (personalised)</div>
+          <div class="banner-text">Budget summary: Jan 2026 · Overspend £142 · Dining top category</div>
+        </div>
+      </div>
+      <div class="col-card mt-8">
+        <div class="col-card-title text-muted">Personalisation Note</div>
+        <div class="col-card-body">Compact mode alters presentation only — not evidence, authority, or safety constraints. Full evidence available on request.</div>
+      </div>`;
+
+    case 'layer_boundary':
+      return `<div class="col-card">
+        <div class="col-card-title text-muted mb-8">Layer Boundaries</div>
+        <div class="flex-row" style="flex-direction:column;align-items:flex-start;gap:6px">
+          <div class="flex-row"><span class="boundary-marker bm-done">[KNOWLEDGE UX-11 ✓]</span><span class="fs-11 text-success">Document data loaded</span></div>
+          <div class="flex-row"><span style="color:var(--apex-text-muted);margin-left:12px;font-size:14px">↓</span></div>
+          <div class="flex-row"><span class="boundary-marker bm-done">[INTELLIGENCE UX-12 ✓]</span><span class="fs-11 text-success">Intelligence items delivered</span></div>
+          <div class="flex-row"><span style="color:var(--apex-text-muted);margin-left:12px;font-size:14px">↓</span></div>
+          <div class="flex-row"><span class="boundary-marker bm-active">[AGENTS UX-13 — current]</span><span class="fs-11 text-accent">Task in progress</span></div>
+          <div class="flex-row"><span style="color:var(--apex-text-muted);margin-left:12px;font-size:14px">↓</span></div>
+          <div class="flex-row"><span class="boundary-marker bm-future">[APPROVAL UX-14 — not reached]</span><span class="fs-11 text-muted">No approval required yet</span></div>
+        </div>
+      </div>`;
+
+    case 'proposal_boundary':
+      return `<div class="banner banner-warning">
+        <span class="banner-icon">◈</span>
+        <div class="banner-body">
+          <div class="banner-title text-warning">PROPOSAL GENERATED — NOT EXECUTED</div>
+          <div class="banner-text">create_document step has PROPOSED status.<br>PROPOSAL ≠ EXECUTION — awaiting approval.</div>
+        </div>
+      </div>
+      ${renderStepList(sc.steps)}`;
+
+    case 'approval_ux14':
+      return `<div class="banner banner-neutral">
+        <span class="banner-icon">🔒</span>
+        <div class="banner-body">
+          <div class="banner-title">UX-14 APPROVAL REQUIRED</div>
+          <div class="banner-text">This step requires formal approval workflow. UX-14 owns approval and execution. Boundary reached.</div>
+        </div>
+      </div>
+      <div class="mt-8"><span class="boundary-marker bm-future">[→APPROVAL UX-14]</span></div>
+      ${renderStepList(sc.steps)}`;
+
+    case 'self_auth_denied':
+      return `<div class="banner banner-error">
+        <span class="banner-icon">🔒</span>
+        <div class="banner-body">
+          <div class="banner-title text-error">PERMISSION_DENIED</div>
+          <div class="banner-text">Agent cannot self-authorise.<br>Authority: OBSERVE · Required: EXECUTE<br>Constitutional constraint: agents may not grant themselves authority.</div>
+        </div>
+      </div>`;
+
+    case 'gov_block':
+      return `<div class="banner banner-error">
+        <span class="banner-icon">⛔</span>
+        <div class="banner-body">
+          <div class="banner-title text-error">GOVERNANCE_BLOCK</div>
+          <div class="banner-text">Constitutional constraint prevents this action. Agent cannot bypass governance controls.<br><span class="mono fs-11">Governance: lib/governance.js</span></div>
+        </div>
+      </div>`;
+
+    case 'failure_visible':
+      return `<div class="banner banner-error" style="border-width:2px">
+        <span class="banner-icon" style="font-size:24px">✗</span>
+        <div class="banner-body">
+          <div class="banner-title text-error" style="font-size:16px">FAILED</div>
+          <div class="banner-text">Failure is explicit and cannot be hidden. Error visible to user at all times. No success claim made.<br><span class="mono fs-11">Document not found: budgets/january-2026.md</span></div>
+        </div>
+      </div>
+      ${renderStepList(sc.steps)}`;
+
+    case 'uncertainty_visible':
+      return `<div class="banner banner-warning" style="border-width:2px">
+        <span class="banner-icon" style="font-size:24px">◎</span>
+        <div class="banner-body">
+          <div class="banner-title text-warning" style="font-size:16px">UNCERTAIN</div>
+          <div class="banner-text">UNCERTAIN badge cannot be suppressed. Confidence insufficient. Evidence basis shown.<br>Evidence: INFERRED only — no KNOWN source.</div>
+        </div>
+      </div>`;
+
+    case 'insufficient_info':
+      return `<div class="banner banner-error">
+        <span class="banner-icon">⛔</span>
+        <div class="banner-body">
+          <div class="banner-title text-error">INSUFFICIENT INFORMATION</div>
+          <div class="banner-text">Cannot complete task — required information unavailable.<br>Gap type: MISSING<br>Resolve gap to retry.</div>
+        </div>
+      </div>
+      <div class="evidence-panel mt-8">
+        <div class="evidence-header">Knowledge Gap</div>
+        <div class="evidence-item"><span class="evidence-state state-missing">MISSING</span><span class="evidence-source">Finance/Actuals-Q3-2025.md — not in vault</span></div>
+      </div>`;
+
+    case 'conflicting':
+      return `<div class="banner banner-error">
+        <span class="banner-icon">⚠</span>
+        <div class="banner-body">
+          <div class="banner-title text-error">CONFLICTING EVIDENCE</div>
+          <div class="banner-text">Sources disagree on server cost. Cannot synthesise. User resolution required.</div>
+        </div>
+      </div>
+      <div class="evidence-panel mt-8">
+        <div class="evidence-header">Conflicting Items</div>
+        <div class="evidence-item"><span class="evidence-state state-conflicting">CONFLICT A</span><span class="evidence-source">System Agent reading: £42/month</span></div>
+        <div class="evidence-item"><span class="evidence-state state-conflicting">CONFLICT B</span><span class="evidence-source">File Agent reading: £67/month</span></div>
+      </div>`;
+
+    case 'history':
+      return `<table class="history-table">
+        <thead><tr><th>Date</th><th>Goal</th><th>Status</th><th>Duration</th></tr></thead>
+        <tbody>
+          <tr><td>2026-08-28</td><td>Summarise monthly budget…</td><td><span class="evidence-state state-known">DONE</span></td><td class="mono">4.2s</td></tr>
+          <tr><td>2026-08-27</td><td>Analyse Q3 expenses</td><td><span class="evidence-state state-missing">FAILED</span></td><td class="mono">2.1s</td></tr>
+          <tr><td>2026-08-26</td><td>Generate investment report…</td><td><span class="evidence-state state-stale" style="background:rgba(100,116,139,0.12);color:#64748b">CANCEL</span></td><td class="mono">1.0s</td></tr>
+          <tr><td>2026-08-25</td><td>Estimate next quarter spend</td><td><span class="evidence-state state-known">DONE</span></td><td class="mono">6.8s</td></tr>
+          <tr><td>2026-08-24</td><td>Spending optimisation recs</td><td><span class="evidence-state state-known">DONE</span></td><td class="mono">3.5s</td></tr>
+        </tbody>
+      </table>`;
+
+    case 'lifecycle':
+      return `<div class="lifecycle-pipeline">
+        ${[
+          {label:'PENDING',col:'#5a5a78',current:false},
+          {label:'RUNNING',col:'#00d4ff',current:true},
+          {label:'WAITING',col:'#f59e0b',current:false},
+          {label:'COMPLETED',col:'#10b981',current:false},
+          {label:'FAILED',col:'#ef4444',current:false}
+        ].map((n,i,arr) => `
+          <div class="lifecycle-node">
+            <div class="lifecycle-node-dot" style="border-color:${n.col};background:${n.current?n.col:'transparent'}"></div>
+            <div class="lifecycle-node-label" style="color:${n.current?n.col:'var(--apex-text-muted)'}">${n.label}</div>
+          </div>
+          ${i<arr.length-1?'<span class="lifecycle-arrow">→</span>':''}
+        `).join('')}
+      </div>
+      <div class="fs-11 text-muted mt-8">Current position: <span style="color:#00d4ff;font-weight:600">RUNNING</span></div>
+      ${renderStepList(sc.steps)}`;
+
+    case 'cancelled_by_user':
+      return `<div class="banner banner-neutral">
+        <span class="banner-icon">×</span>
+        <div class="banner-body">
+          <div class="banner-title" style="color:#64748b">CANCELLED BY USER</div>
+          <div class="banner-text">Task cancelled at step 2 of 2. Audit record: user-initiated cancellation at 14:32:07.</div>
+        </div>
+      </div>
+      ${renderStepList(sc.steps)}
+      <div class="col-card mt-8">
+        <div class="identity-row"><span class="identity-key">Cancelled by</span><span class="identity-val">User</span></div>
+        <div class="identity-row"><span class="identity-key">Time</span><span class="identity-val mono">14:32:07</span></div>
+        <div class="identity-row"><span class="identity-key">Audit</span><span class="identity-val mono fs-11">CANCEL_USER · task_f3b2c1</span></div>
+      </div>`;
+
+    default:
+      return `<div class="fs-11 text-muted">Output: ${sc.output}</div>`;
+  }
+}
+
+/* ============================================================
+   PIPELINE STRIP (for pipeline task scenarios)
+   ============================================================ */
+function hasPipelineStrip(sc) {
+  // show pipeline strip for pipeline/multi-agent scenarios
+  return ['multi_agent','layer_boundary','rec_vs_exec'].includes(sc.output);
+}
+
+/* ============================================================
+   LOAD SCENARIO
+   ============================================================ */
+function loadScenario(index) {
+  const sc = SCENARIOS[index];
+  if (!sc) return;
+
+  activeScenarioIndex = index;
+  activeAgentId = sc.agent;
+
+  // Update scenario buttons
+  document.querySelectorAll('.scenario-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === index);
+  });
+
+  // Update agent panel highlight
+  renderLeft();
+
+  // Update header tag
+  document.getElementById('active-scenario-tag').textContent = `${sc.id} — ${sc.label}`;
+
+  // Update inspector
+  const ag = DOMAIN_AGENTS[sc.agent] || DOMAIN_AGENTS.finance;
+  document.getElementById('insp-agent').textContent = ag.name;
+  const ts = TASK_STATUS[sc.taskStatus] || TASK_STATUS.pending;
+  document.getElementById('insp-status').textContent = ts.label;
+  document.getElementById('insp-authority').textContent = ag.authorityLevel;
+  document.getElementById('insp-domain').textContent = ag.domain;
+  document.getElementById('insp-scenario').textContent = sc.id;
+
+  // Update boundary markers
+  const bstrip = document.getElementById('boundary-strip');
+  const isApproval = ['approval_boundary','approval_ux14','proposal_boundary'].includes(sc.output);
+  bstrip.innerHTML = `
+    <span class="boundary-marker bm-done">[KNOWLEDGE UX-11]</span>
+    <span class="boundary-marker bm-done">[INTELLIGENCE UX-12]</span>
+    <span class="boundary-marker bm-active">[AGENTS UX-13]</span>
+    <span class="boundary-marker ${isApproval?'bm-active':'bm-future'}">[→APPROVAL UX-14]</span>
+  `;
+
+  // Build centre content
+  const centre = document.getElementById('work-surface');
+  const col = ag.colour;
+
+  let html = '';
+
+  // Task card
+  html += `<div class="task-card">
+    <div class="task-card-header">
+      <div>
+        <div class="task-goal">${sc.taskGoal}</div>
+        <div class="task-id">${sc.id} · ${ag.name}</div>
+      </div>
+      ${taskStatusBadge(sc.taskStatus)}
+    </div>`;
+
+  // Agent strip inside task card
+  html += `<div class="flex-row mt-4" style="gap:6px">
+    <div class="agent-dot" style="background:${col}"></div>
+    <span class="fs-11" style="color:${col};font-weight:600">${ag.name}</span>
+    <span class="tag" style="background:${col}18;color:${col}">${ag.domain}</span>
+    <span class="agent-badge" style="background:rgba(99,102,241,0.1);color:#818cf8;border:1px solid rgba(99,102,241,0.25)">${ag.authorityLevel}</span>
+  </div>
+  </div>`;
+
+  // Steps (if any)
+  if (sc.steps && sc.steps.length > 0) {
+    html += renderStepList(sc.steps);
+  }
+
+  // Output area
+  html += `<div class="output-area">
+    <div class="output-label">Output · ${sc.id}</div>
+    ${renderOutput(sc)}
+  </div>`;
+
+  centre.innerHTML = html;
+
+  // Announce for screen readers
+  announce(`Scenario ${sc.n}: ${sc.label}. Status: ${ts.label}. Agent: ${ag.name}.`);
+
+  // Scroll scenario button into view
+  const btn = document.getElementById(`sbtn-${index}`);
+  if (btn) btn.scrollIntoView({block:'nearest', behavior:'smooth'});
+}
+
+/* ============================================================
+   RESET
+   ============================================================ */
+function resetToDefault() {
+  activeScenarioIndex = -1;
+  activeAgentId = null;
+  document.querySelectorAll('.scenario-btn').forEach(btn => btn.classList.remove('active'));
+  renderLeft();
+  document.getElementById('active-scenario-tag').textContent = 'No scenario loaded';
+  document.getElementById('insp-agent').textContent = '—';
+  document.getElementById('insp-status').textContent = '—';
+  document.getElementById('insp-authority').textContent = '—';
+  document.getElementById('insp-domain').textContent = '—';
+  document.getElementById('insp-scenario').textContent = '—';
+  document.getElementById('boundary-strip').innerHTML = `
+    <span class="boundary-marker bm-future">[KNOWLEDGE UX-11]</span>
+    <span class="boundary-marker bm-future">[INTELLIGENCE UX-12]</span>
+    <span class="boundary-marker bm-active">[AGENTS UX-13]</span>
+    <span class="boundary-marker bm-future">[→APPROVAL UX-14]</span>
+  `;
+  document.getElementById('work-surface').innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--apex-text-muted);font-size:13px;flex-direction:column;gap:12px;">
+    <div style="font-size:28px;">⬡</div>
+    <div>Select a scenario or press a key to begin</div>
+    <div style="font-size:11px;color:var(--apex-text-muted);">Keys 1–9, 0, q–p, a–l, z–m load scenarios 1–36</div>
+  </div>`;
+}
+
+/* ============================================================
+   KEYBOARD HANDLER
+   ============================================================ */
+document.addEventListener('keydown', e => {
+  const keyMap = {'1':0,'2':1,'3':2,'4':3,'5':4,'6':5,'7':6,'8':7,'9':8,'0':9,'q':10,'w':11,'e':12,'r':13,'t':14,'y':15,'u':16,'i':17,'o':18,'p':19,'a':20,'s':21,'d':22,'f':23,'g':24,'h':25,'j':26,'k':27,'l':28,'z':29,'x':30,'c':31,'v':32,'b':33,'n':34,'m':35};
+  if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+    const k = e.key.toLowerCase();
+    if (k === 'escape') { resetToDefault(); return; }
+    if (k === 'tab') return;
+    if (keyMap[k] !== undefined) {
+      // Only trigger if focus not in an input
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+      e.preventDefault();
+      loadScenario(keyMap[k]);
+    }
+  }
+});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+renderLeft();
+renderScenarioList();
+</script>
+</body>
+</html>

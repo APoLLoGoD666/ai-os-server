@@ -1,0 +1,2349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APEX UX-11 — Knowledge Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --apex-color-bg: #0a0e1a;
+  --apex-color-surface: #111827;
+  --apex-color-surface-2: #1a2235;
+  --apex-color-border: rgba(0,212,255,0.12);
+  --apex-color-primary: #00d4ff;
+  --apex-color-accent: #7c3aed;
+  --apex-color-success: #10b981;
+  --apex-color-warning: #f59e0b;
+  --apex-color-error: #ef4444;
+  --apex-color-text: #e6f4ff;
+  --apex-color-muted: rgba(230,244,255,0.45);
+  --apex-font-ui: 'Inter', sans-serif;
+  --apex-font-brand: 'Cinzel', serif;
+  --apex-font-data: 'JetBrains Mono', monospace;
+  --apex-space-xs: 4px;
+  --apex-space-sm: 8px;
+  --apex-space-md: 16px;
+  --apex-space-lg: 24px;
+  --apex-space-xl: 32px;
+  --apex-radius-sm: 4px;
+  --apex-radius-md: 8px;
+  --apex-radius-lg: 12px;
+  --apex-transition-fast: 150ms ease;
+  --apex-transition-std: 250ms ease;
+  --apex-transition-slow: 350ms ease;
+  --apex-knowledge-validated: #10b981;
+  --apex-knowledge-candidate: #7c3aed;
+  --apex-knowledge-stale: #f59e0b;
+  --apex-knowledge-conflicting: #ef4444;
+  --apex-knowledge-unknown: rgba(230,244,255,0.35);
+  --apex-knowledge-superseded: rgba(230,244,255,0.25);
+  --apex-gap-missing: #ef4444;
+  --apex-gap-stale: #f59e0b;
+  --apex-gap-conflicting: #ef4444;
+  --apex-gap-decision-blocking: #ef4444;
+  --apex-gap-incomplete: #f59e0b;
+  --apex-gap-assumed: rgba(245,158,11,0.6);
+  --apex-gap-derived: rgba(0,212,255,0.4);
+  --apex-gap-unknown: rgba(230,244,255,0.35);
+  --apex-gap-authoritative: rgba(0,212,255,0.5);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--apex-font-ui);
+  background: var(--apex-color-bg);
+  color: var(--apex-color-text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+.apex-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--apex-space-md) var(--apex-space-xl);
+  background: var(--apex-color-surface);
+  border-bottom: 1px solid var(--apex-color-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  gap: var(--apex-space-md);
+}
+
+.header-left { display: flex; align-items: baseline; gap: var(--apex-space-md); }
+
+.apex-wordmark {
+  font-family: var(--apex-font-brand);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--apex-color-primary);
+  letter-spacing: 0.12em;
+}
+
+.header-subtitle {
+  font-size: 11px;
+  color: var(--apex-color-muted);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+.phase-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: rgba(0,212,255,0.12);
+  color: var(--apex-color-primary);
+  border: 1px solid rgba(0,212,255,0.3);
+  border-radius: var(--apex-radius-sm);
+  padding: 2px 8px;
+}
+
+.header-right { display: flex; align-items: center; gap: var(--apex-space-sm); }
+
+.domain-indicator {
+  font-size: 10px;
+  font-family: var(--apex-font-data);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  padding: 3px 10px;
+  border-radius: var(--apex-radius-sm);
+  background: rgba(0,212,255,0.08);
+  color: var(--apex-color-primary);
+  border: 1px solid var(--apex-color-border);
+}
+
+.domain-label { color: var(--apex-color-muted); font-size: 9px; margin-right: 4px; }
+
+.shortcuts-hint {
+  font-size: 9px;
+  color: var(--apex-color-muted);
+  font-family: var(--apex-font-data);
+}
+
+/* ── MAIN LAYOUT ── */
+.apex-main {
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── LEFT PANEL ── */
+.panel-left {
+  background: var(--apex-color-surface);
+  border-right: 1px solid var(--apex-color-border);
+  padding: var(--apex-space-md);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--apex-space-md);
+  max-height: calc(100vh - 61px);
+}
+
+.panel-section-title {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--apex-color-muted);
+  text-transform: uppercase;
+  margin-bottom: var(--apex-space-xs);
+  padding-bottom: var(--apex-space-xs);
+  border-bottom: 1px solid var(--apex-color-border);
+}
+
+.control-group { display: flex; flex-direction: column; gap: var(--apex-space-xs); }
+
+.ctrl-label {
+  font-size: 10px;
+  color: var(--apex-color-muted);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.domain-buttons { display: flex; flex-wrap: wrap; gap: var(--apex-space-xs); }
+
+.domain-btn {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 4px 8px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid var(--apex-color-border);
+  background: transparent;
+  color: var(--apex-color-muted);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+}
+.domain-btn:hover { border-color: var(--apex-color-primary); color: var(--apex-color-primary); }
+.domain-btn.active { background: rgba(0,212,255,0.12); border-color: var(--apex-color-primary); color: var(--apex-color-primary); }
+
+.filter-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.filter-chip {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 3px 7px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid var(--apex-color-border);
+  background: transparent;
+  color: var(--apex-color-muted);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+}
+.filter-chip:hover { border-color: rgba(230,244,255,0.3); color: var(--apex-color-text); }
+.filter-chip.active { background: rgba(230,244,255,0.08); border-color: rgba(230,244,255,0.3); color: var(--apex-color-text); }
+.filter-chip.active.state-fully-known { border-color: var(--apex-knowledge-validated); color: var(--apex-knowledge-validated); background: rgba(16,185,129,0.08); }
+.filter-chip.active.state-stale { border-color: var(--apex-knowledge-stale); color: var(--apex-knowledge-stale); background: rgba(245,158,11,0.08); }
+.filter-chip.active.state-conflicting { border-color: var(--apex-knowledge-conflicting); color: var(--apex-knowledge-conflicting); background: rgba(239,68,68,0.08); }
+.filter-chip.active.state-partially-known { border-color: var(--apex-knowledge-candidate); color: var(--apex-knowledge-candidate); background: rgba(124,58,237,0.08); }
+
+.disclosure-slider-row {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-sm);
+}
+
+.disclosure-level-display {
+  font-family: var(--apex-font-data);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--apex-color-primary);
+  min-width: 24px;
+}
+
+.disclosure-track {
+  display: flex;
+  gap: 3px;
+  flex: 1;
+}
+
+.disclosure-pip {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--apex-color-border);
+  cursor: pointer;
+  transition: background var(--apex-transition-fast);
+}
+.disclosure-pip.active { background: var(--apex-color-primary); }
+
+.disclosure-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--apex-color-muted);
+  margin-top: 2px;
+}
+
+.search-input {
+  width: 100%;
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  color: var(--apex-color-text);
+  font-family: var(--apex-font-ui);
+  font-size: 12px;
+  outline: none;
+  transition: border-color var(--apex-transition-fast);
+}
+.search-input:focus { border-color: var(--apex-color-primary); }
+.search-input::placeholder { color: var(--apex-color-muted); }
+
+.search-hint {
+  font-size: 9px;
+  color: var(--apex-color-muted);
+  font-family: var(--apex-font-data);
+  margin-top: 3px;
+}
+
+/* Voice panel */
+.voice-panel {
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--apex-space-sm);
+}
+
+.voice-state-row {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-sm);
+}
+
+.voice-orb {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--apex-color-muted);
+  flex-shrink: 0;
+  transition: background var(--apex-transition-std);
+}
+.voice-orb.state-idle { background: var(--apex-color-muted); }
+.voice-orb.state-thinking { background: var(--apex-color-accent); animation: pulse-orb 1s infinite; }
+.voice-orb.state-speaking { background: var(--apex-color-primary); animation: pulse-orb 0.6s infinite; }
+.voice-orb.state-listening { background: var(--apex-color-success); animation: pulse-orb 0.8s infinite; }
+.voice-orb.state-failed { background: var(--apex-color-error); }
+
+@keyframes pulse-orb {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+.voice-state-label {
+  font-family: var(--apex-font-data);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--apex-color-text);
+  letter-spacing: 0.06em;
+}
+
+.voice-gating-notice {
+  font-size: 9px;
+  color: var(--apex-color-warning);
+  display: none;
+  padding: 4px 6px;
+  background: rgba(245,158,11,0.08);
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid rgba(245,158,11,0.2);
+}
+
+.btn-knowledge-query {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 6px var(--apex-space-md);
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid var(--apex-color-primary);
+  background: rgba(0,212,255,0.08);
+  color: var(--apex-color-primary);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+  letter-spacing: 0.04em;
+}
+.btn-knowledge-query:hover { background: rgba(0,212,255,0.16); }
+
+/* Personalisation panel */
+.personal-panel {
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--apex-space-sm);
+}
+
+.personal-row { display: flex; align-items: center; justify-content: space-between; gap: var(--apex-space-sm); }
+.personal-key { font-size: 10px; color: var(--apex-color-muted); }
+
+.toggle-pair { display: flex; gap: 3px; }
+.toggle-opt {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid var(--apex-color-border);
+  background: transparent;
+  color: var(--apex-color-muted);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+}
+.toggle-opt.active { border-color: var(--apex-color-accent); color: var(--apex-color-accent); background: rgba(124,58,237,0.1); }
+
+/* ── CENTER COLUMN ── */
+.panel-center {
+  overflow-y: auto;
+  padding: var(--apex-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--apex-space-md);
+  max-height: calc(100vh - 61px);
+}
+
+.feed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--apex-space-sm) 0;
+}
+
+.feed-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--apex-color-muted);
+  text-transform: uppercase;
+}
+
+.feed-meta {
+  font-size: 10px;
+  color: var(--apex-color-muted);
+  font-family: var(--apex-font-data);
+}
+
+#knowledge-feed { display: flex; flex-direction: column; gap: var(--apex-space-md); }
+
+/* ── KNOWLEDGE CARD ── */
+.knowledge-card {
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-lg);
+  padding: var(--apex-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--apex-space-sm);
+  animation: card-enter var(--apex-transition-std) both;
+  transition: border-color var(--apex-transition-std), box-shadow var(--apex-transition-std);
+}
+.knowledge-card:hover { border-color: rgba(0,212,255,0.25); box-shadow: 0 0 0 1px rgba(0,212,255,0.06); }
+.knowledge-card.highlighted { border-color: var(--apex-color-primary); box-shadow: 0 0 12px rgba(0,212,255,0.18); }
+
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-sm);
+  flex-wrap: wrap;
+}
+
+.state-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid currentColor;
+}
+
+.cat-badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--apex-radius-sm);
+  background: rgba(230,244,255,0.06);
+  color: var(--apex-color-muted);
+  border: 1px solid var(--apex-color-border);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.card-id {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  color: rgba(230,244,255,0.25);
+  margin-left: auto;
+}
+
+.freshness-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--apex-radius-sm);
+  letter-spacing: 0.06em;
+}
+.freshness-badge.freshness-current { background: rgba(16,185,129,0.12); color: var(--apex-color-success); border: 1px solid rgba(16,185,129,0.3); }
+.freshness-badge.freshness-recent { background: rgba(0,212,255,0.08); color: var(--apex-color-primary); border: 1px solid rgba(0,212,255,0.25); }
+.freshness-badge.freshness-aging { background: rgba(245,158,11,0.06); color: rgba(245,158,11,0.7); border: 1px solid rgba(245,158,11,0.2); }
+.freshness-badge.freshness-stale { background: rgba(245,158,11,0.12); color: var(--apex-color-warning); border: 1px solid rgba(245,158,11,0.35); }
+.freshness-badge.freshness-unknown { background: rgba(230,244,255,0.04); color: var(--apex-color-muted); border: 1px solid var(--apex-color-border); }
+
+.card-fact {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--apex-color-text);
+  line-height: 1.55;
+}
+.card-fact.brief { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+.confidence-row {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-sm);
+}
+
+.conf-tier {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  min-width: 72px;
+  color: var(--apex-color-muted);
+}
+
+.conf-bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(230,244,255,0.08);
+  overflow: hidden;
+}
+
+.conf-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width var(--apex-transition-slow);
+}
+.conf-fill.tier-very-high { background: var(--apex-color-success); }
+.conf-fill.tier-high { background: var(--apex-color-primary); }
+.conf-fill.tier-medium { background: var(--apex-color-accent); }
+.conf-fill.tier-low { background: var(--apex-color-warning); }
+.conf-fill.tier-uncertain { background: var(--apex-color-error); }
+
+.conf-pct {
+  font-family: var(--apex-font-data);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--apex-color-muted);
+  min-width: 30px;
+  text-align: right;
+}
+
+/* Disclosure layers */
+.disclosure {
+  border-left: 2px solid var(--apex-color-border);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  border-radius: 0 var(--apex-radius-sm) var(--apex-radius-sm) 0;
+  font-size: 11px;
+  animation: disclose-in var(--apex-transition-std) both;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.disclosure.l1 { background: rgba(0,212,255,0.04); border-left-color: rgba(0,212,255,0.25); }
+.disclosure.l2 { background: rgba(124,58,237,0.04); border-left-color: rgba(124,58,237,0.3); }
+.disclosure.l3 { background: rgba(16,185,129,0.04); border-left-color: rgba(16,185,129,0.25); font-family: var(--apex-font-data); font-size: 10px; }
+.disclosure.l4 { background: rgba(245,158,11,0.04); border-left-color: rgba(245,158,11,0.3); font-family: var(--apex-font-data); font-size: 10px; }
+
+@keyframes disclose-in {
+  from { opacity: 0; max-height: 0; margin-top: -4px; }
+  to { opacity: 1; max-height: 200px; margin-top: 0; }
+}
+
+.disclosure .label {
+  font-weight: 600;
+  color: var(--apex-color-primary);
+  font-size: 9px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.disclosure .created {
+  color: var(--apex-color-muted);
+  font-size: 9px;
+  margin-left: auto;
+}
+
+.support-row {
+  display: flex;
+  gap: var(--apex-space-md);
+  font-size: 10px;
+  color: var(--apex-color-muted);
+}
+
+.relations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.rel-badge {
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: var(--apex-radius-sm);
+  background: rgba(0,212,255,0.06);
+  color: var(--apex-color-primary);
+  border: 1px solid rgba(0,212,255,0.2);
+  cursor: pointer;
+  transition: background var(--apex-transition-fast);
+}
+.rel-badge:hover { background: rgba(0,212,255,0.14); }
+
+/* Conflict block */
+.conflict-block {
+  border: 1px solid rgba(239,68,68,0.35);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  background: rgba(239,68,68,0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.conflict-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--apex-color-error);
+  letter-spacing: 0.06em;
+}
+
+.conflict-row {
+  font-size: 11px;
+  color: var(--apex-color-text);
+  display: flex;
+  align-items: baseline;
+  gap: var(--apex-space-sm);
+}
+
+.src-label {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--apex-color-error);
+  min-width: 14px;
+}
+
+.conflict-note {
+  font-size: 10px;
+  color: var(--apex-color-muted);
+  font-style: italic;
+}
+
+.conflict-actions { display: flex; gap: var(--apex-space-sm); margin-top: 4px; }
+
+/* Gap block */
+.gap-block {
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  background: rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-sm);
+  flex-wrap: wrap;
+}
+
+.gap-type-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--apex-radius-sm);
+  letter-spacing: 0.07em;
+}
+
+.gap-severity {
+  font-size: 9px;
+  color: var(--apex-color-muted);
+}
+
+.gap-blocks {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--apex-color-error);
+  background: rgba(239,68,68,0.12);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: var(--apex-radius-sm);
+  padding: 2px 6px;
+  letter-spacing: 0.06em;
+}
+
+.gap-status {
+  font-size: 9px;
+  font-family: var(--apex-font-data);
+  color: var(--apex-color-muted);
+  margin-left: auto;
+}
+
+/* Card actions */
+.card-actions {
+  display: flex;
+  gap: var(--apex-space-xs);
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.card-actions button, .gap-block button, .conflict-actions button {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid var(--apex-color-border);
+  background: rgba(230,244,255,0.04);
+  color: var(--apex-color-muted);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+  font-family: var(--apex-font-ui);
+}
+.card-actions button:hover, .gap-block button:hover { border-color: var(--apex-color-primary); color: var(--apex-color-primary); background: rgba(0,212,255,0.06); }
+.conflict-actions button:hover { border-color: var(--apex-color-error); color: var(--apex-color-error); background: rgba(239,68,68,0.06); }
+
+/* Intelligence boundary */
+.intel-boundary-card {
+  border: 1px dashed rgba(124,58,237,0.4);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  background: rgba(124,58,237,0.04);
+  margin-top: var(--apex-space-xs);
+}
+
+.intel-boundary-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--apex-color-accent);
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.ux-boundary-tag {
+  font-size: 8px;
+  background: rgba(124,58,237,0.15);
+  border: 1px solid rgba(124,58,237,0.3);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+.intel-fact {
+  font-size: 11px;
+  color: var(--apex-color-text);
+  font-style: italic;
+}
+
+/* Pipeline overlay */
+.pipeline-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10,14,26,0.88);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn var(--apex-transition-std) both;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.pipeline-modal {
+  background: var(--apex-color-surface);
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-lg);
+  padding: var(--apex-space-xl);
+  max-width: 600px;
+  width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: var(--apex-space-lg);
+}
+
+.pipeline-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--apex-color-primary);
+}
+
+.pipeline-stages {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-sm);
+  flex-wrap: wrap;
+}
+
+.pipeline-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.3;
+  transition: opacity var(--apex-transition-std);
+}
+.pipeline-stage.active { opacity: 1; }
+
+.pipeline-node {
+  width: 72px;
+  height: 36px;
+  border-radius: var(--apex-radius-md);
+  border: 1px solid var(--apex-color-border);
+  background: var(--apex-color-surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--apex-color-muted);
+  transition: all var(--apex-transition-std);
+}
+.pipeline-stage.active .pipeline-node {
+  border-color: var(--apex-color-primary);
+  color: var(--apex-color-primary);
+  background: rgba(0,212,255,0.08);
+  box-shadow: 0 0 12px rgba(0,212,255,0.15);
+}
+
+.pipeline-arrow {
+  font-size: 14px;
+  color: var(--apex-color-border);
+  flex-shrink: 0;
+}
+.pipeline-stage.active + .pipeline-arrow { color: var(--apex-color-primary); }
+
+.pipeline-stage-label { font-size: 8px; color: var(--apex-color-muted); }
+
+.pipeline-close {
+  align-self: flex-end;
+  font-size: 10px;
+  padding: 6px 14px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid var(--apex-color-border);
+  background: transparent;
+  color: var(--apex-color-muted);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+}
+.pipeline-close:hover { border-color: var(--apex-color-primary); color: var(--apex-color-primary); }
+
+/* Toast notifications */
+.toast-container {
+  position: fixed;
+  top: 72px;
+  right: var(--apex-space-xl);
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: var(--apex-space-sm);
+}
+
+.toast {
+  background: var(--apex-color-surface);
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  min-width: 280px;
+  max-width: 340px;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--apex-space-sm);
+  animation: toast-enter var(--apex-transition-std) both;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+
+@keyframes toast-enter {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.toast-level-badge {
+  font-size: 8px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.toast-body { flex: 1; }
+.toast-title { font-size: 11px; font-weight: 600; color: var(--apex-color-text); }
+.toast-sub { font-size: 10px; color: var(--apex-color-muted); margin-top: 2px; }
+
+.toast-dismiss {
+  background: none;
+  border: none;
+  color: var(--apex-color-muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+}
+.toast-dismiss:hover { color: var(--apex-color-text); }
+
+/* ── RIGHT PANEL ── */
+.panel-right {
+  background: var(--apex-color-surface);
+  border-left: 1px solid var(--apex-color-border);
+  overflow-y: auto;
+  max-height: calc(100vh - 61px);
+  display: flex;
+  flex-direction: column;
+}
+
+.right-section {
+  padding: var(--apex-space-md);
+  border-bottom: 1px solid var(--apex-color-border);
+}
+
+.scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+}
+
+.scenario-btn {
+  font-size: 8px;
+  font-weight: 700;
+  font-family: var(--apex-font-data);
+  padding: 4px 2px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid var(--apex-color-border);
+  background: rgba(230,244,255,0.03);
+  color: var(--apex-color-muted);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+  text-align: center;
+  letter-spacing: 0;
+}
+.scenario-btn:hover { border-color: var(--apex-color-primary); color: var(--apex-color-primary); background: rgba(0,212,255,0.06); }
+.scenario-btn.active { border-color: var(--apex-color-accent); color: var(--apex-color-accent); background: rgba(124,58,237,0.1); }
+
+/* Gap inspector */
+.gap-inspector {
+  padding: var(--apex-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--apex-space-sm);
+  flex: 1;
+}
+
+.gap-inspector-empty {
+  font-size: 11px;
+  color: var(--apex-color-muted);
+  text-align: center;
+  padding: var(--apex-space-xl) 0;
+  font-style: italic;
+}
+
+.gap-inspector-content { display: flex; flex-direction: column; gap: var(--apex-space-sm); }
+
+.gap-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--apex-space-sm);
+  font-size: 11px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--apex-color-border);
+}
+
+.gap-field:last-child { border-bottom: none; }
+.gap-field-key { color: var(--apex-color-muted); font-size: 10px; min-width: 80px; }
+.gap-field-val { font-family: var(--apex-font-data); font-size: 10px; color: var(--apex-color-text); text-align: right; }
+
+.gap-actions { display: flex; flex-direction: column; gap: var(--apex-space-xs); margin-top: var(--apex-space-xs); }
+
+.gap-action-btn {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 7px var(--apex-space-md);
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid var(--apex-color-border);
+  background: transparent;
+  color: var(--apex-color-text);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+  text-align: left;
+  font-family: var(--apex-font-ui);
+}
+.gap-action-btn:hover { border-color: var(--apex-color-primary); color: var(--apex-color-primary); background: rgba(0,212,255,0.06); }
+.gap-action-btn.danger:hover { border-color: var(--apex-color-error); color: var(--apex-color-error); background: rgba(239,68,68,0.06); }
+
+/* Knowledge log */
+.knowledge-log {
+  padding: var(--apex-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+  border-top: 1px solid var(--apex-color-border);
+}
+
+.log-entry {
+  display: flex;
+  gap: var(--apex-space-sm);
+  font-size: 10px;
+  animation: log-enter var(--apex-transition-fast) both;
+}
+
+@keyframes log-enter {
+  from { opacity: 0; transform: translateX(4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.log-ts {
+  font-family: var(--apex-font-data);
+  color: rgba(230,244,255,0.2);
+  flex-shrink: 0;
+  font-size: 9px;
+  margin-top: 1px;
+}
+
+.log-msg { color: var(--apex-color-muted); line-height: 1.4; }
+.log-msg.highlight { color: var(--apex-color-primary); }
+
+/* Search results */
+.search-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--apex-space-sm);
+}
+
+.search-result-card {
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  animation: card-enter var(--apex-transition-std) both;
+}
+
+.search-result-header {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-sm);
+  margin-bottom: 4px;
+}
+
+.search-score {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--apex-color-success);
+  margin-left: auto;
+}
+
+.search-method {
+  font-size: 8px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(0,212,255,0.08);
+  color: var(--apex-color-primary);
+  border: 1px solid rgba(0,212,255,0.2);
+  font-family: var(--apex-font-data);
+}
+
+.search-result-fact { font-size: 11px; color: var(--apex-color-text); margin-bottom: 4px; }
+.search-result-source { font-size: 9px; color: var(--apex-color-muted); font-family: var(--apex-font-data); }
+
+/* Gap summary view */
+.gap-summary-panel {
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-lg);
+  padding: var(--apex-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--apex-space-sm);
+}
+
+.gap-summary-row {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-sm);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--apex-color-border);
+}
+.gap-summary-row:last-child { border-bottom: none; }
+
+.gap-summary-id { font-family: var(--apex-font-data); font-size: 9px; color: var(--apex-color-muted); min-width: 60px; }
+.gap-summary-type { font-size: 10px; font-weight: 700; }
+.gap-summary-sev { font-size: 9px; color: var(--apex-color-muted); }
+.gap-summary-status { font-family: var(--apex-font-data); font-size: 9px; margin-left: auto; }
+
+/* Spoken response bubble */
+.spoken-bubble {
+  background: rgba(0,212,255,0.06);
+  border: 1px solid rgba(0,212,255,0.2);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  font-size: 12px;
+  color: var(--apex-color-text);
+  font-style: italic;
+  line-height: 1.6;
+  animation: card-enter var(--apex-transition-std) both;
+}
+
+.spoken-meta {
+  font-size: 9px;
+  color: var(--apex-color-primary);
+  margin-top: 4px;
+  font-style: normal;
+  font-family: var(--apex-font-data);
+}
+
+/* Feed filtered notice */
+.feed-filter-notice {
+  background: rgba(245,158,11,0.06);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  font-size: 11px;
+  color: var(--apex-color-warning);
+}
+
+/* Agent input annotation */
+.agent-input-card {
+  background: rgba(124,58,237,0.05);
+  border: 1px solid rgba(124,58,237,0.25);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  font-size: 11px;
+  color: var(--apex-color-text);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.agent-arrow {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-sm);
+  font-size: 10px;
+  color: var(--apex-color-accent);
+  font-family: var(--apex-font-data);
+}
+
+/* ONE APEX footer on cards */
+.one-apex-footer {
+  font-size: 9px;
+  color: rgba(0,212,255,0.4);
+  border-top: 1px solid var(--apex-color-border);
+  padding-top: var(--apex-space-xs);
+  font-family: var(--apex-font-data);
+}
+
+/* Proposal chain */
+.proposal-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-md);
+}
+
+.chain-step {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-sm);
+  font-size: 10px;
+}
+
+.chain-node {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--apex-radius-sm);
+}
+
+.chain-connector { color: var(--apex-color-muted); font-size: 12px; }
+.chain-detail { font-size: 9px; color: var(--apex-color-muted); margin-left: auto; font-family: var(--apex-font-data); }
+
+/* Correction workflow */
+.correction-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  background: rgba(245,158,11,0.05);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: var(--apex-radius-md);
+}
+
+.correction-step {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-sm);
+  font-size: 10px;
+}
+
+.correction-step-indicator {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--apex-color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.correction-step-indicator.done { background: var(--apex-color-success); border-color: var(--apex-color-success); color: #000; }
+.correction-step-indicator.active { background: var(--apex-color-warning); border-color: var(--apex-color-warning); color: #000; animation: pulse-orb 1.2s infinite; }
+.correction-step-indicator.pending { color: var(--apex-color-muted); }
+
+/* Relevance boost tag */
+.relevance-boost {
+  font-size: 9px;
+  background: rgba(16,185,129,0.1);
+  color: var(--apex-color-success);
+  border: 1px solid rgba(16,185,129,0.25);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: var(--apex-font-data);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.3); }
+
+/* Empty state */
+.feed-empty {
+  text-align: center;
+  padding: var(--apex-space-xl) var(--apex-space-md);
+  color: var(--apex-color-muted);
+  font-size: 12px;
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="apex-header">
+  <div class="header-left">
+    <span class="apex-wordmark">APEX</span>
+    <span class="header-subtitle">UX-11 — Knowledge</span>
+    <span class="phase-badge">UX-11 CANONICAL</span>
+  </div>
+  <div class="header-right">
+    <span class="shortcuts-hint">1-9 / Q-Y / A-H scenarios · D domain · L disclosure · V voice · X reset</span>
+    <div class="domain-indicator">
+      <span class="domain-label">DOMAIN</span>
+      <span id="active-domain-display">GLOBAL</span>
+    </div>
+  </div>
+</header>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- PIPELINE OVERLAY (hidden by default) -->
+<div class="pipeline-overlay" id="pipeline-overlay" style="display:none">
+  <div class="pipeline-modal">
+    <div class="pipeline-title">UX-08 KNOWLEDGE PIPELINE — Knowledge item entering presentation pipeline</div>
+    <div class="pipeline-stages" id="pipeline-stages">
+      <div class="pipeline-stage active" id="ps-0">
+        <div class="pipeline-node">CONTEXT</div>
+        <div class="pipeline-stage-label">Session context</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-stage" id="ps-1">
+        <div class="pipeline-node">RELEVANCE</div>
+        <div class="pipeline-stage-label">Domain match</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-stage" id="ps-2">
+        <div class="pipeline-node">PRIORITY</div>
+        <div class="pipeline-stage-label">Confidence sort</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-stage" id="ps-3">
+        <div class="pipeline-node">PRESENT</div>
+        <div class="pipeline-stage-label">Channel decision</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-stage" id="ps-4">
+        <div class="pipeline-node">CHANNEL</div>
+        <div class="pipeline-stage-label">Visual surface</div>
+      </div>
+    </div>
+    <button class="pipeline-close" onclick="closePipeline()">Close</button>
+  </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="apex-main">
+
+  <!-- LEFT PANEL -->
+  <aside class="panel-left">
+
+    <div>
+      <div class="panel-section-title">Domain</div>
+      <div class="control-group">
+        <div class="domain-buttons">
+          <button class="domain-btn active" onclick="setDomain('global')">GLOBAL</button>
+          <button class="domain-btn" onclick="setDomain('finance')">FINANCE</button>
+          <button class="domain-btn" onclick="setDomain('uni')">UNI</button>
+          <button class="domain-btn" onclick="setDomain('business')">BUSINESS</button>
+          <button class="domain-btn" onclick="setDomain('system')">SYSTEM</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel-section-title">Knowledge State Filter</div>
+      <div class="filter-chips">
+        <button class="filter-chip active" onclick="setStateFilter('ALL')">ALL</button>
+        <button class="filter-chip state-fully-known" onclick="setStateFilter('FULLY_KNOWN')">FULLY KNOWN</button>
+        <button class="filter-chip state-stale" onclick="setStateFilter('STALE')">STALE</button>
+        <button class="filter-chip state-conflicting" onclick="setStateFilter('CONFLICTING')">CONFLICTING</button>
+        <button class="filter-chip state-partially-known" onclick="setStateFilter('PARTIALLY_KNOWN')">PARTIALLY KNOWN</button>
+        <button class="filter-chip" onclick="setStateFilter('UNKNOWN')">UNKNOWN</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel-section-title">Gap Type Filter</div>
+      <div class="filter-chips" id="gap-filter-chips">
+        <button class="filter-chip active" onclick="setGapFilter('ALL')">ALL</button>
+        <button class="filter-chip" onclick="setGapFilter('MISSING')">MISSING</button>
+        <button class="filter-chip" onclick="setGapFilter('STALE')">STALE</button>
+        <button class="filter-chip" onclick="setGapFilter('CONFLICTING')">CONFLICTING</button>
+        <button class="filter-chip" onclick="setGapFilter('DECISION_BLOCKING')">DECISION BLOCKING</button>
+        <button class="filter-chip" onclick="setGapFilter('INCOMPLETE')">INCOMPLETE</button>
+        <button class="filter-chip" onclick="setGapFilter('ASSUMED')">ASSUMED</button>
+        <button class="filter-chip" onclick="setGapFilter('DERIVED')">DERIVED</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel-section-title">Disclosure Level</div>
+      <div class="control-group">
+        <div class="disclosure-slider-row">
+          <div class="disclosure-level-display" id="disclosure-display">L0</div>
+          <div class="disclosure-track">
+            <div class="disclosure-pip active" onclick="setDisclosureLevel(0)" title="L0: Fact only"></div>
+            <div class="disclosure-pip" onclick="setDisclosureLevel(1)" title="L1: Source"></div>
+            <div class="disclosure-pip" onclick="setDisclosureLevel(2)" title="L2: Evidence"></div>
+            <div class="disclosure-pip" onclick="setDisclosureLevel(3)" title="L3: T3 Chain"></div>
+            <div class="disclosure-pip" onclick="setDisclosureLevel(4)" title="L4: Pipeline"></div>
+          </div>
+        </div>
+        <div class="disclosure-labels">
+          <span>Fact</span>
+          <span>Source</span>
+          <span>Evidence</span>
+          <span>T3 Chain</span>
+          <span>Pipeline</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel-section-title">Search</div>
+      <input class="search-input" id="search-input" placeholder="e.g. scaling laws, budget, retainer…" oninput="handleSearch(this.value)">
+      <div class="search-hint">hybrid BM25 + pgvector retrieval</div>
+    </div>
+
+    <div>
+      <div class="panel-section-title">Voice State</div>
+      <div class="voice-panel">
+        <div class="voice-state-row">
+          <div class="voice-orb state-idle" id="voice-orb"></div>
+          <span class="voice-state-label" id="voice-state-label">IDLE</span>
+        </div>
+        <div class="voice-gating-notice" id="voice-gating-notice">
+          Proactive knowledge surfacing paused — listening in progress
+        </div>
+        <button class="btn-knowledge-query" onclick="runScenario(17)">Knowledge query (V-17)</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel-section-title">Personalisation</div>
+      <div class="personal-panel">
+        <div class="personal-row">
+          <span class="personal-key">Verbosity</span>
+          <div class="toggle-pair">
+            <button class="toggle-opt active" id="verb-standard" onclick="setVerbosity('standard')">STANDARD</button>
+            <button class="toggle-opt" id="verb-brief" onclick="setVerbosity('brief')">BRIEF</button>
+          </div>
+        </div>
+        <div class="personal-row">
+          <span class="personal-key">Expertise</span>
+          <div class="toggle-pair">
+            <button class="toggle-opt active" id="exp-intermediate" onclick="setExpertise('intermediate')">INTERMEDIATE</button>
+            <button class="toggle-opt" id="exp-expert" onclick="setExpertise('expert')">EXPERT</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- CENTER COLUMN -->
+  <main class="panel-center">
+    <div class="feed-header">
+      <span class="feed-title">Knowledge Feed</span>
+      <span class="feed-meta" id="feed-meta">7 items · GLOBAL</span>
+    </div>
+    <div id="knowledge-feed"></div>
+  </main>
+
+  <!-- RIGHT PANEL -->
+  <aside class="panel-right">
+
+    <div class="right-section">
+      <div class="panel-section-title" style="margin-bottom:var(--apex-space-sm)">Scenarios</div>
+      <div class="scenario-grid" id="scenario-grid"></div>
+    </div>
+
+    <div class="gap-inspector">
+      <div class="panel-section-title">Gap Inspector</div>
+      <div id="gap-inspector-body">
+        <div class="gap-inspector-empty">Select a gap to inspect</div>
+      </div>
+    </div>
+
+    <div class="knowledge-log">
+      <div class="panel-section-title" style="margin-bottom:4px">Knowledge Log</div>
+      <div id="knowledge-log-entries"></div>
+    </div>
+
+  </aside>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// DATA MODEL
+// ─────────────────────────────────────────────
+const KNOWLEDGE_STATE = {
+  FULLY_KNOWN:     { label: 'FULLY KNOWN',     colour: 'var(--apex-knowledge-validated)' },
+  STALE:           { label: 'STALE',           colour: 'var(--apex-knowledge-stale)' },
+  CONFLICTING:     { label: 'CONFLICTING',     colour: 'var(--apex-knowledge-conflicting)' },
+  PARTIALLY_KNOWN: { label: 'PARTIALLY KNOWN', colour: 'var(--apex-knowledge-candidate)' },
+  UNKNOWN:         { label: 'UNKNOWN',         colour: 'var(--apex-knowledge-unknown)' }
+};
+
+const GAP_TYPES = {
+  MISSING:           { colour: 'var(--apex-gap-missing)',           severity: 'HIGH',   blocks: false },
+  STALE:             { colour: 'var(--apex-gap-stale)',             severity: 'MEDIUM', blocks: false },
+  INCOMPLETE:        { colour: 'var(--apex-gap-incomplete)',        severity: 'MEDIUM', blocks: false },
+  ASSUMED:           { colour: 'var(--apex-gap-assumed)',           severity: 'MEDIUM', blocks: false },
+  CONFLICTING:       { colour: 'var(--apex-gap-conflicting)',       severity: 'HIGH',   blocks: true  },
+  DERIVED:           { colour: 'var(--apex-gap-derived)',           severity: 'LOW',    blocks: false },
+  UNKNOWN:           { colour: 'var(--apex-gap-unknown)',           severity: 'LOW',    blocks: false },
+  DECISION_BLOCKING: { colour: 'var(--apex-gap-decision-blocking)', severity: 'HIGH',   blocks: true  },
+  AUTHORITATIVE:     { colour: 'var(--apex-gap-authoritative)',     severity: 'MEDIUM', blocks: false }
+};
+
+const VOICE_STATES = ['IDLE','ACTIVATING','LISTENING','UNDERSTANDING','THINKING','SPEAKING','INTERRUPTED','PAUSED','LIVE','FAILED','CANCELLED'];
+
+let knowledgeItems = [
+  {
+    id: 'km-001', fact: 'CS249R Assignment 3 on Neural Scaling Laws is due November 3, 2026.',
+    category: 'fact', domain: 'uni', confidence: 0.87, source: 'calendar_sync',
+    evidence: 'Calendar event confirmed by two sync events on Oct 15 and Oct 20.',
+    status: 'validated', state: 'FULLY_KNOWN', freshness: 'CURRENT',
+    support_count: 3, contradiction_count: 0, created_at: '2026-10-15T09:00:00Z', gap: null,
+    relationships: [{ type: 'RELATES_TO', label: 'Chinchilla scaling research' }]
+  },
+  {
+    id: 'km-002', fact: 'October 2026 food spending is £312 of a £500 budget.',
+    category: 'fact', domain: 'finance', confidence: 0.92, source: 'finance_agent',
+    evidence: 'Transaction data: 24 food transactions categorised. Budget set Aug 2026.',
+    status: 'validated', state: 'FULLY_KNOWN', freshness: 'RECENT',
+    support_count: 5, contradiction_count: 0, created_at: '2026-10-22T14:30:00Z', gap: null,
+    relationships: [{ type: 'SUPPORTS', label: 'Monthly budget analysis' }]
+  },
+  {
+    id: 'km-003', fact: 'Business revenue for Q3 2025 was approximately £18,000.',
+    category: 'fact', domain: 'business', confidence: 0.54, source: 'voice_chat',
+    evidence: 'User stated revenue figure during voice session. Single confirmation only.',
+    status: 'candidate', state: 'PARTIALLY_KNOWN', freshness: 'AGING',
+    support_count: 1, contradiction_count: 0, created_at: '2025-09-30T11:00:00Z',
+    gap: { id: 'gap-003', type: 'INCOMPLETE', severity: 'MEDIUM', blocks: false, status: 'OPEN' },
+    relationships: []
+  },
+  {
+    id: 'km-004', fact: 'Client A signed a 6-month retainer in January 2026.',
+    category: 'fact', domain: 'business', confidence: 0.43, source: 'email',
+    evidence: null, status: 'candidate', state: 'STALE', freshness: 'STALE',
+    support_count: 1, contradiction_count: 0, created_at: '2026-01-15T10:00:00Z',
+    gap: { id: 'gap-004', type: 'STALE', severity: 'MEDIUM', blocks: false, status: 'OPEN' },
+    relationships: []
+  },
+  {
+    id: 'km-005', fact: "Anthropic's Chinchilla scaling laws state that compute-optimal training requires matched increases in both model size and training tokens.",
+    category: 'concept', domain: 'uni', confidence: 0.78, source: 'vault',
+    evidence: 'Sourced from vault file: CS249R/Chinchilla-Laws.md. Cross-referenced with original Hoffmann et al. 2022.',
+    status: 'validated', state: 'FULLY_KNOWN', freshness: 'CURRENT',
+    support_count: 4, contradiction_count: 0, created_at: '2026-09-10T08:00:00Z', gap: null,
+    relationships: [{ type: 'RELATES_TO', label: 'CS249R Assignment 3' }, { type: 'DERIVED_FROM', label: 'Hoffmann et al. 2022' }]
+  },
+  {
+    id: 'km-006', fact: 'Startup X requires a £5,000 retainer before contract signing.',
+    category: 'fact', domain: 'business', confidence: 0.31, source: 'voice_chat',
+    evidence: null, status: 'candidate', state: 'UNKNOWN', freshness: 'UNKNOWN',
+    support_count: 0, contradiction_count: 0, created_at: '2026-10-26T16:00:00Z',
+    gap: { id: 'gap-006', type: 'ASSUMED', severity: 'MEDIUM', blocks: false, status: 'OPEN' },
+    relationships: []
+  },
+  {
+    id: 'km-007', fact: 'Monthly server infrastructure cost is either £42 or £67.',
+    category: 'fact', domain: 'system', confidence: 0.28, source: 'system',
+    evidence: 'Two system observations recorded contradictory values on different dates.',
+    status: 'validated', state: 'CONFLICTING', freshness: 'RECENT',
+    support_count: 2, contradiction_count: 1, created_at: '2026-10-01T12:00:00Z',
+    gap: { id: 'gap-007', type: 'CONFLICTING', severity: 'HIGH', blocks: true, status: 'OPEN' },
+    conflict: {
+      sourceA: { value: '£42/month', source: 'Render dashboard', date: '2026-09-01' },
+      sourceB: { value: '£67/month', source: 'Invoice scan', date: '2026-10-01' }
+    },
+    relationships: [{ type: 'CONTRADICTS', label: 'Prior cost estimate' }]
+  }
+];
+
+let activeDomain = 'global';
+let disclosureLevel = 0;
+let stateFilter = 'ALL';
+let gapFilter = 'ALL';
+let verbosity = 'standard';
+let expertiseLevel = 'intermediate';
+let knowledgeLog = [];
+let selectedGapId = null;
+let activeVoiceState = 'IDLE';
+let activeScenario = null;
+let searchResults = null;
+let extraCards = [];
+
+// ─────────────────────────────────────────────
+// UTILITY
+// ─────────────────────────────────────────────
+function nowTs() {
+  return new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function addLog(msg, highlight = false) {
+  knowledgeLog.unshift({ ts: nowTs(), msg, highlight });
+  if (knowledgeLog.length > 60) knowledgeLog.pop();
+  renderLog();
+}
+
+function confTier(c) {
+  if (c >= 0.85) return 'VERY HIGH';
+  if (c >= 0.65) return 'HIGH';
+  if (c >= 0.40) return 'MEDIUM';
+  if (c >= 0.20) return 'LOW';
+  return 'UNCERTAIN';
+}
+
+function confTierClass(c) {
+  if (c >= 0.85) return 'tier-very-high';
+  if (c >= 0.65) return 'tier-high';
+  if (c >= 0.40) return 'tier-medium';
+  if (c >= 0.20) return 'tier-low';
+  return 'tier-uncertain';
+}
+
+function gapColour(type) {
+  const m = { MISSING:'#ef4444', STALE:'#f59e0b', INCOMPLETE:'#f59e0b', ASSUMED:'rgba(245,158,11,0.6)',
+    CONFLICTING:'#ef4444', DERIVED:'rgba(0,212,255,0.4)', UNKNOWN:'rgba(230,244,255,0.35)',
+    DECISION_BLOCKING:'#ef4444', AUTHORITATIVE:'rgba(0,212,255,0.5)' };
+  return m[type] || 'rgba(230,244,255,0.35)';
+}
+
+// ─────────────────────────────────────────────
+// RENDER CARD
+// ─────────────────────────────────────────────
+function renderCard(item, overrideDisclosure = null, extra = {}) {
+  const dl = overrideDisclosure !== null ? overrideDisclosure : disclosureLevel;
+  const kState = KNOWLEDGE_STATE[item.state] || KNOWLEDGE_STATE.UNKNOWN;
+  const tier = confTier(item.confidence);
+  const tierCls = confTierClass(item.confidence);
+  const freshCls = 'freshness-' + (item.freshness || 'UNKNOWN').toLowerCase();
+  const factCls = verbosity === 'brief' ? 'card-fact brief' : 'card-fact';
+
+  let l1 = dl >= 1 ? `<div class="disclosure l1">
+    <div style="display:flex;align-items:baseline;gap:8px">
+      <span class="label">Source</span>
+      <span>${item.source || 'Unknown — evidence not traced'}</span>
+      <span class="created">First recorded: ${new Date(item.created_at).toLocaleDateString('en-GB')}</span>
+    </div>
+  </div>` : '';
+
+  let l2 = dl >= 2 ? `<div class="disclosure l2">
+    <span class="label">Evidence</span>
+    <span>${item.evidence || 'No evidence recorded'}</span>
+    <div class="support-row">
+      <span>Support: ${item.support_count}</span>
+      <span>Contradictions: ${item.contradiction_count}</span>
+    </div>
+  </div>` : '';
+
+  let l3 = dl >= 3 ? `<div class="disclosure l3">
+    <span class="label">T3 Chain</span>
+    <span>ObservationRecord → EvidenceObject → InterpretationRecord → BeliefObject → KnowledgeClaim</span>
+    ${item.relationships && item.relationships.length > 0 ? '<div class="relations">' + item.relationships.map(r =>
+      `<span class="rel-badge" onclick="handleRelClick('${item.id}','${r.label}')">${r.type}: ${r.label}</span>`).join('') + '</div>' : ''}
+  </div>` : '';
+
+  let l4 = dl >= 4 ? `<div class="disclosure l4">
+    <span class="label">Pipeline / Constitutional</span>
+    <span>status: ${item.status} · validation_state: validated</span>
+    <span>MIN_CONFIDENCE: 0.60 · MIN_CONFIRMATIONS: 2</span>
+    <span>${item.confidence >= 0.60 ? '✓ Meets promotion threshold' : '✗ Below promotion threshold — candidate only'}</span>
+  </div>` : '';
+
+  let conflictBlock = item.conflict ? `<div class="conflict-block">
+    <div class="conflict-title">CONFLICTING SOURCES — APEX cannot resolve</div>
+    <div class="conflict-row"><span class="src-label">A</span> ${item.conflict.sourceA.value} — ${item.conflict.sourceA.source} (${item.conflict.sourceA.date})</div>
+    <div class="conflict-row"><span class="src-label">B</span> ${item.conflict.sourceB.value} — ${item.conflict.sourceB.source} (${item.conflict.sourceB.date})</div>
+    <div class="conflict-note">User action required to resolve.</div>
+    <div class="conflict-actions">
+      <button onclick="addLog('User accepted uncertainty for km-007')">Accept Uncertainty</button>
+      <button onclick="addLog('Verification requested for km-007')">Request Verification</button>
+    </div>
+  </div>` : '';
+
+  let gapBlock = '';
+  if (item.gap) {
+    const gc = gapColour(item.gap.type);
+    gapBlock = `<div class="gap-block" style="border-color:${gc}20">
+      <span class="gap-type-badge" style="background:${gc}18;color:${gc};border:1px solid ${gc}40">${item.gap.type}</span>
+      <span class="gap-severity">Severity: ${item.gap.severity}</span>
+      ${item.gap.blocks ? '<span class="gap-blocks">BLOCKS DECISION</span>' : ''}
+      <span class="gap-status">${item.gap.status}</span>
+      <button onclick="selectGap('${item.id}')">Inspect Gap</button>
+    </div>`;
+  }
+
+  let intelBoundary = extra.intelBoundary ? `<div class="intel-boundary-card">
+    <div class="intel-boundary-label">
+      INFERRED <span class="ux-boundary-tag">UX-12 BOUNDARY</span>
+    </div>
+    <div class="intel-fact">"Based on this, APEX infers: Chinchilla laws apply to your CS249R assignment — scaling relationship for exam scope."</div>
+    <div style="margin-top:6px;font-size:9px;color:var(--apex-color-muted)">KNOWN vs INFERRED clearly distinct. Intelligence layer, not knowledge layer.</div>
+  </div>` : '';
+
+  let agentAnnotation = extra.agentAnnotation ? `<div class="agent-input-card">
+    <div class="agent-arrow">KNOWLEDGE → AGENT INPUT (not AGENT) <span class="ux-boundary-tag" style="border-color:rgba(124,58,237,0.3);background:rgba(124,58,237,0.1);color:var(--apex-color-accent)">UX-13</span></div>
+    <div style="font-size:10px;color:var(--apex-color-muted)">Finance Agent is consuming: [${item.id}] as structured input. Knowledge is not merged — boundary preserved.</div>
+  </div>` : '';
+
+  let proposalChain = extra.proposalChain ? `<div class="proposal-chain">
+    <div class="panel-section-title" style="margin-bottom:6px">Knowledge → Proposal Chain</div>
+    <div class="chain-step">
+      <span class="chain-node" style="background:rgba(16,185,129,0.12);color:var(--apex-color-success);border:1px solid rgba(16,185,129,0.3)">KNOWN</span>
+      <span class="chain-connector">→</span>
+      <span style="font-size:10px;color:var(--apex-color-muted)">km-002 finance fact</span>
+    </div>
+    <div class="chain-step">
+      <span class="chain-node" style="background:rgba(124,58,237,0.1);color:var(--apex-color-accent);border:1px solid rgba(124,58,237,0.3)">INTELLIGENCE</span>
+      <span class="chain-connector">→</span>
+      <span style="font-size:10px;color:var(--apex-color-muted)">Synthesis: budget trend analysis</span>
+    </div>
+    <div class="chain-step">
+      <span class="chain-node" style="background:rgba(245,158,11,0.1);color:var(--apex-color-warning);border:1px solid rgba(245,158,11,0.3)">PROPOSAL</span>
+      <span class="chain-connector">→</span>
+      <span style="font-size:10px;color:var(--apex-color-muted)">"Create November budget plan"</span>
+      <span class="chain-detail">UX-14 APPROVAL REQUIRED</span>
+    </div>
+  </div>` : '';
+
+  let relevanceBoost = extra.relevanceBoost ? `<span class="relevance-boost">+0.15 domain boost</span>` : '';
+
+  let oneApexFooter = extra.oneApex ? `<div class="one-apex-footer">Stored in: semantic_memory (canonical) · knowledge_graph_nodes · ONE APEX system</div>` : '';
+
+  let correctionFlow = extra.correctionFlow ? `<div class="correction-flow">
+    <div style="font-size:10px;font-weight:600;color:var(--apex-color-warning);margin-bottom:4px">CORRECTION WORKFLOW — IN_RESOLUTION</div>
+    <div class="correction-step"><div class="correction-step-indicator done">✓</div><span style="font-size:10px">Correction initiated — Flag pressed</span></div>
+    <div class="correction-step"><div class="correction-step-indicator done">✓</div><span style="font-size:10px">ASSUMED gap created</span></div>
+    <div class="correction-step"><div class="correction-step-indicator active">~</div><span style="font-size:10px">IN_RESOLUTION — awaiting reassessment</span></div>
+    <div class="correction-step"><div class="correction-step-indicator pending">○</div><span style="font-size:10px;color:var(--apex-color-muted)">Pending: new evidence or user confirmation</span></div>
+    <div style="font-size:9px;color:var(--apex-color-muted);margin-top:2px">Knowledge item unchanged until reassessment complete.</div>
+  </div>` : '';
+
+  const nextLevelLabel = dl < 4 ? ['Source','Evidence','T3 Chain','Pipeline'][dl] : 'Less';
+
+  return `<div class="knowledge-card" id="card-${item.id}" data-state="${item.state}" data-domain="${item.domain}">
+    <div class="card-header">
+      <span class="state-badge" style="background:${kState.colour}18;color:${kState.colour};border-color:${kState.colour}60">${kState.label}</span>
+      <span class="cat-badge">${item.category}</span>
+      <span class="freshness-badge ${freshCls}">${item.freshness || 'UNKNOWN'}</span>
+      ${relevanceBoost}
+      <span class="card-id">${item.id}</span>
+    </div>
+    <div class="${factCls}">${item.fact}</div>
+    <div class="confidence-row">
+      <span class="conf-tier">${tier}</span>
+      <div class="conf-bar"><div class="conf-fill ${tierCls}" style="width:${Math.round(item.confidence*100)}%"></div></div>
+      <span class="conf-pct">${Math.round(item.confidence*100)}%</span>
+    </div>
+    ${l1}${l2}${l3}${l4}
+    ${conflictBlock}${gapBlock}
+    ${intelBoundary}${agentAnnotation}${proposalChain}${correctionFlow}
+    ${oneApexFooter}
+    <div class="card-actions">
+      <button onclick="cycleCardDisclosure('${item.id}')">Show ${nextLevelLabel}</button>
+      <button onclick="flagItem('${item.id}')">Flag</button>
+      ${item.relationships && item.relationships.length > 0 ? `<button onclick="handleRelClick('${item.id}','')">Related (${item.relationships.length})</button>` : ''}
+    </div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────
+// RENDER FEED
+// ─────────────────────────────────────────────
+function renderFeed() {
+  const feed = document.getElementById('knowledge-feed');
+  if (!feed) return;
+
+  if (searchResults !== null) {
+    renderSearchResultsView();
+    return;
+  }
+
+  let html = '';
+  let count = 0;
+  let hiddenCount = 0;
+
+  const allItems = [...knowledgeItems, ...extraCards];
+
+  allItems.forEach(item => {
+    const domainMatch = activeDomain === 'global' || item.domain === activeDomain;
+    const stateMatch = stateFilter === 'ALL' || item.state === stateFilter;
+    const gapMatch = gapFilter === 'ALL' || (item.gap && item.gap.type === gapFilter);
+
+    if (!domainMatch) { hiddenCount++; return; }
+    if (!stateMatch) return;
+    if (gapFilter !== 'ALL' && !gapMatch) return;
+
+    const extra = {};
+    if (item._intelBoundary) extra.intelBoundary = true;
+    if (item._agentAnnotation) extra.agentAnnotation = true;
+    if (item._proposalChain) extra.proposalChain = true;
+    if (item._oneApex) extra.oneApex = true;
+    if (item._correctionFlow) extra.correctionFlow = true;
+    if (item._relevanceBoost && activeDomain === 'finance') extra.relevanceBoost = true;
+
+    html += renderCard(item, null, extra);
+    count++;
+  });
+
+  if (html === '') {
+    html = `<div class="feed-empty">No knowledge items match current filters.</div>`;
+  }
+
+  if (hiddenCount > 0 && activeDomain !== 'global') {
+    html = `<div class="feed-filter-notice">${hiddenCount} item${hiddenCount > 1 ? 's' : ''} filtered — not relevant to ${activeDomain.toUpperCase()} domain.</div>` + html;
+  }
+
+  feed.innerHTML = html;
+
+  document.getElementById('feed-meta').textContent =
+    `${count} item${count !== 1 ? 's' : ''} · ${activeDomain.toUpperCase()}`;
+}
+
+function renderSearchResultsView() {
+  const feed = document.getElementById('knowledge-feed');
+  if (!searchResults) return;
+  let html = `<div class="feed-filter-notice" style="border-color:rgba(0,212,255,0.2);background:rgba(0,212,255,0.04);color:var(--apex-color-primary)">
+    Search: "${searchResults.query}" — ${searchResults.items.length} results via hybrid BM25+pgvector
+    <button onclick="clearSearch()" style="margin-left:8px;font-size:9px;padding:2px 8px;border:1px solid var(--apex-color-border);border-radius:3px;background:transparent;color:var(--apex-color-muted);cursor:pointer">Clear</button>
+  </div>`;
+  html += '<div class="search-results">';
+  searchResults.items.forEach(r => {
+    html += `<div class="search-result-card">
+      <div class="search-result-header">
+        <span class="state-badge" style="background:${KNOWLEDGE_STATE[r.state]?.colour}18;color:${KNOWLEDGE_STATE[r.state]?.colour};border-color:${KNOWLEDGE_STATE[r.state]?.colour}60">${KNOWLEDGE_STATE[r.state]?.label}</span>
+        <span class="cat-badge">${r.category}</span>
+        <span class="search-method">${r.method}</span>
+        <span class="search-score">score: ${r.score.toFixed(3)}</span>
+      </div>
+      <div class="search-result-fact">${r.fact}</div>
+      <div class="search-result-source">${r.source} · ${r.id}</div>
+    </div>`;
+  });
+  html += '</div>';
+  feed.innerHTML = html;
+}
+
+// ─────────────────────────────────────────────
+// DOMAIN & FILTER CONTROLS
+// ─────────────────────────────────────────────
+function setDomain(d) {
+  activeDomain = d;
+  document.getElementById('active-domain-display').textContent = d.toUpperCase();
+  document.querySelectorAll('.domain-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.toLowerCase() === d || (d === 'global' && b.textContent === 'GLOBAL'));
+  });
+  renderFeed();
+}
+
+function setStateFilter(f) {
+  stateFilter = f;
+  document.querySelectorAll('.filter-chip[onclick^="setStateFilter"]').forEach(b => {
+    const bf = b.getAttribute('onclick').match(/'([^']+)'/)[1];
+    b.classList.toggle('active', bf === f);
+  });
+  renderFeed();
+}
+
+function setGapFilter(f) {
+  gapFilter = f;
+  document.querySelectorAll('#gap-filter-chips .filter-chip').forEach(b => {
+    const bf = b.getAttribute('onclick').match(/'([^']+)'/)[1];
+    b.classList.toggle('active', bf === f);
+  });
+  renderFeed();
+}
+
+function setDisclosureLevel(l) {
+  disclosureLevel = l;
+  document.getElementById('disclosure-display').textContent = 'L' + l;
+  document.querySelectorAll('.disclosure-pip').forEach((p, i) => {
+    p.classList.toggle('active', i <= l);
+  });
+  renderFeed();
+}
+
+function setVerbosity(v) {
+  verbosity = v;
+  document.getElementById('verb-standard').classList.toggle('active', v === 'standard');
+  document.getElementById('verb-brief').classList.toggle('active', v === 'brief');
+  renderFeed();
+}
+
+function setExpertise(e) {
+  expertiseLevel = e;
+  document.getElementById('exp-intermediate').classList.toggle('active', e === 'intermediate');
+  document.getElementById('exp-expert').classList.toggle('active', e === 'expert');
+  addLog('Expertise set to ' + e);
+}
+
+function setVoiceState(s) {
+  activeVoiceState = s;
+  const orb = document.getElementById('voice-orb');
+  const label = document.getElementById('voice-state-label');
+  const gating = document.getElementById('voice-gating-notice');
+  if (label) label.textContent = s;
+  if (orb) {
+    orb.className = 'voice-orb state-' + s.toLowerCase();
+  }
+  if (gating) {
+    gating.style.display = (s === 'LISTENING' || s === 'UNDERSTANDING') ? 'block' : 'none';
+  }
+}
+
+// ─────────────────────────────────────────────
+// CARD INTERACTIONS
+// ─────────────────────────────────────────────
+function cycleCardDisclosure(id) {
+  const newLevel = disclosureLevel < 4 ? disclosureLevel + 1 : 0;
+  setDisclosureLevel(newLevel);
+  addLog('Disclosure level → L' + newLevel);
+}
+
+function flagItem(id) {
+  const item = knowledgeItems.find(k => k.id === id) || extraCards.find(k => k.id === id);
+  if (!item) return;
+  if (id === 'km-003') {
+    item._correctionFlow = true;
+    addLog('Flag: km-003 → correction workflow initiated. IN_RESOLUTION.', true);
+  } else {
+    addLog('Flag submitted for ' + id + ' — review queued.');
+  }
+  renderFeed();
+}
+
+function selectGap(itemId) {
+  selectedGapId = itemId;
+  const item = [...knowledgeItems, ...extraCards].find(k => k.id === itemId);
+  if (!item || !item.gap) return;
+  renderGapInspector(item);
+  addLog('Gap inspector opened: ' + item.gap.id);
+}
+
+function handleRelClick(id, label) {
+  if (id === 'km-005' && (label === 'CS249R Assignment 3' || label === '')) {
+    const card = document.getElementById('card-km-001');
+    if (card) {
+      card.classList.add('highlighted');
+      setTimeout(() => card.classList.remove('highlighted'), 2500);
+    }
+    addLog('Related navigation: km-005 → km-001 (CS249R Assignment 3)', true);
+  } else {
+    addLog('Related knowledge: ' + label + ' (from ' + id + ')');
+  }
+}
+
+// ─────────────────────────────────────────────
+// GAP INSPECTOR
+// ─────────────────────────────────────────────
+function renderGapInspector(item) {
+  const body = document.getElementById('gap-inspector-body');
+  if (!item || !item.gap) {
+    body.innerHTML = '<div class="gap-inspector-empty">Select a gap to inspect</div>';
+    return;
+  }
+  const g = item.gap;
+  const gc = gapColour(g.type);
+  body.innerHTML = `<div class="gap-inspector-content">
+    <div class="gap-field"><span class="gap-field-key">Gap ID</span><span class="gap-field-val">${g.id}</span></div>
+    <div class="gap-field"><span class="gap-field-key">Type</span><span class="gap-field-val" style="color:${gc}">${g.type}</span></div>
+    <div class="gap-field"><span class="gap-field-key">Severity</span><span class="gap-field-val">${g.severity}</span></div>
+    <div class="gap-field"><span class="gap-field-key">Blocks Decision</span><span class="gap-field-val" style="color:${g.blocks?'var(--apex-color-error)':'var(--apex-color-muted)'}">${g.blocks ? 'YES' : 'NO'}</span></div>
+    <div class="gap-field"><span class="gap-field-key">Status</span><span class="gap-field-val">${g.status}</span></div>
+    <div class="gap-field"><span class="gap-field-key">Subject</span><span class="gap-field-val">${item.id}</span></div>
+    <div class="gap-field"><span class="gap-field-key">Domain</span><span class="gap-field-val">${item.domain}</span></div>
+    <div class="gap-actions">
+      <button class="gap-action-btn" onclick="resolveGap('${item.id}','IN_RESOLUTION')">Mark IN_RESOLUTION</button>
+      <button class="gap-action-btn danger" onclick="resolveGap('${item.id}','ACCEPTED_UNKNOWN')">Accept Unknown</button>
+    </div>
+  </div>`;
+}
+
+function resolveGap(itemId, action) {
+  const item = [...knowledgeItems, ...extraCards].find(k => k.id === itemId);
+  if (item && item.gap) {
+    item.gap.status = action;
+    addLog('Gap ' + item.gap.id + ' → ' + action, true);
+    renderGapInspector(item);
+    renderFeed();
+  }
+}
+
+// ─────────────────────────────────────────────
+// LOG
+// ─────────────────────────────────────────────
+function renderLog() {
+  const el = document.getElementById('knowledge-log-entries');
+  if (!el) return;
+  el.innerHTML = knowledgeLog.slice(0, 30).map(e =>
+    `<div class="log-entry"><span class="log-ts">${e.ts}</span><span class="log-msg${e.highlight ? ' highlight' : ''}">${e.msg}</span></div>`
+  ).join('');
+}
+
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+function showToast(level, title, sub, colour) {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  const bg = colour || 'rgba(0,212,255,0.15)';
+  const col = colour ? (colour.includes('ef4444') ? '#ef4444' : colour.includes('f59e0b') ? '#f59e0b' : '#00d4ff') : '#00d4ff';
+  t.innerHTML = `<span class="toast-level-badge" style="background:${bg};color:${col}">${level}</span>
+    <div class="toast-body"><div class="toast-title">${title}</div><div class="toast-sub">${sub}</div></div>
+    <button class="toast-dismiss" onclick="this.parentElement.remove()">×</button>`;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// ─────────────────────────────────────────────
+// PIPELINE OVERLAY
+// ─────────────────────────────────────────────
+function showPipeline(cb) {
+  document.getElementById('pipeline-overlay').style.display = 'flex';
+  const stages = [0, 1, 2, 3, 4];
+  stages.forEach(i => document.getElementById('ps-' + i).classList.remove('active'));
+  let i = 0;
+  function next() {
+    if (i < 5) {
+      document.getElementById('ps-' + i).classList.add('active');
+      i++;
+      setTimeout(next, 400);
+    } else if (cb) {
+      setTimeout(cb, 300);
+    }
+  }
+  next();
+}
+
+function closePipeline() {
+  document.getElementById('pipeline-overlay').style.display = 'none';
+}
+
+// ─────────────────────────────────────────────
+// SEARCH
+// ─────────────────────────────────────────────
+function handleSearch(q) {
+  if (!q || q.trim().length < 2) {
+    clearSearch();
+    return;
+  }
+  const ql = q.toLowerCase();
+  const matched = knowledgeItems.filter(k => k.fact.toLowerCase().includes(ql) || k.source.includes(ql) || k.domain.includes(ql));
+  searchResults = {
+    query: q,
+    items: matched.map((k, idx) => ({
+      ...k,
+      score: Math.max(0.45, k.confidence - idx * 0.04),
+      method: idx % 2 === 0 ? 'BM25' : 'pgvector'
+    }))
+  };
+  renderFeed();
+}
+
+function clearSearch() {
+  searchResults = null;
+  document.getElementById('search-input').value = '';
+  renderFeed();
+}
+
+// ─────────────────────────────────────────────
+// SCENARIOS (1-28)
+// ─────────────────────────────────────────────
+const scenarioLabels = [
+  'V-KN-01','V-KN-02','V-KN-03','V-KN-04','V-KN-05','V-KN-06','V-KN-07',
+  'V-KN-08','V-KN-09','V-KN-10','V-KN-11','V-KN-12','V-KN-13','V-KN-14',
+  'V-KN-15','V-KN-16','V-KN-17','V-KN-18','V-KN-19','V-KN-20','V-KN-21',
+  'V-KN-22','V-KN-23','V-KN-24','V-KN-25','V-KN-26','V-KN-27','V-KN-28'
+];
+
+function runScenario(n) {
+  activeScenario = n;
+  document.querySelectorAll('.scenario-btn').forEach((b, i) => b.classList.toggle('active', i === n - 1));
+  scenarios[n] && scenarios[n]();
+}
+
+const scenarios = {
+  1: () => {
+    resetFilters();
+    setDomain('uni');
+    setDisclosureLevel(0);
+    addLog('V-KN-01: Knowledge summary: CS249R deadline — FULLY KNOWN, confidence 87%', true);
+    setTimeout(() => {
+      const el = document.getElementById('card-km-001');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  },
+  2: () => {
+    setDomain('uni');
+    setDisclosureLevel(1);
+    addLog('V-KN-02: Show Source: calendar_sync — First recorded: 15/10/2026', true);
+    setTimeout(() => { const el = document.getElementById('card-km-001'); if (el) { el.classList.add('highlighted'); setTimeout(() => el.classList.remove('highlighted'), 2000); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 100);
+  },
+  3: () => {
+    setDomain('uni');
+    setDisclosureLevel(2);
+    addLog('V-KN-03: Show Evidence on km-005 (Chinchilla): vault file reference shown', true);
+    setTimeout(() => { const el = document.getElementById('card-km-005'); if (el) { el.classList.add('highlighted'); setTimeout(() => el.classList.remove('highlighted'), 2000); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 100);
+  },
+  4: () => {
+    setDomain('uni');
+    setDisclosureLevel(0);
+    addLog('V-KN-04: km-001 freshness = CURRENT — within temporal validity window.', true);
+    setTimeout(() => { const el = document.getElementById('card-km-001'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100);
+  },
+  5: () => {
+    resetFilters();
+    setDomain('business');
+    setDisclosureLevel(1);
+    addLog('V-KN-05: km-004 — STALE. Information may be outdated — STALE gap OPEN.', true);
+    setTimeout(() => { const el = document.getElementById('card-km-004'); if (el) { el.classList.add('highlighted'); setTimeout(() => el.classList.remove('highlighted'), 2000); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 100);
+  },
+  6: () => {
+    resetFilters();
+    setDomain('business');
+    setDisclosureLevel(0);
+    addLog('V-KN-06: km-006 freshness = UNKNOWN — no timestamp data. Confidence 31% = UNCERTAIN.', true);
+    setTimeout(() => { const el = document.getElementById('card-km-006'); if (el) { el.classList.add('highlighted'); setTimeout(() => el.classList.remove('highlighted'), 2000); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 100);
+  },
+  7: () => {
+    setDomain('uni');
+    setDisclosureLevel(0);
+    addLog('V-KN-07: km-001 confidence 87% → VERY HIGH tier. High-confidence validated knowledge.', true);
+    setTimeout(() => { const el = document.getElementById('card-km-001'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100);
+  },
+  8: () => {
+    setDomain('business');
+    setDisclosureLevel(2);
+    addLog('V-KN-08: km-006 confidence 31% → UNCERTAIN. ASSUMED gap only. INFERRED evidence → UNCERTAIN.', true);
+    setTimeout(() => { const el = document.getElementById('card-km-006'); if (el) { el.classList.add('highlighted'); setTimeout(() => el.classList.remove('highlighted'), 2000); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 100);
+  },
+  9: () => {
+    resetFilters();
+    setDomain('system');
+    setDisclosureLevel(4);
+    addLog('V-KN-09: CONFLICTING sources — km-007. APEX cannot resolve. User action required. BLOCKS DECISION.', true);
+    setTimeout(() => { const el = document.getElementById('card-km-007'); if (el) { el.classList.add('highlighted'); setTimeout(() => el.classList.remove('highlighted'), 2000); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); selectGap('km-007'); } }, 100);
+  },
+  10: () => {
+    resetFilters();
+    setDomain('business');
+    setDisclosureLevel(2);
+    addLog('V-KN-10: km-003 PARTIALLY KNOWN — INCOMPLETE gap. Additional evidence needed.', true);
+    setTimeout(() => { const el = document.getElementById('card-km-003'); if (el) { el.classList.add('highlighted'); setTimeout(() => el.classList.remove('highlighted'), 2000); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); selectGap('km-003'); } }, 100);
+  },
+  11: () => {
+    resetFilters();
+    setDomain('global');
+    const exists = extraCards.find(k => k.id === 'km-011');
+    if (!exists) {
+      extraCards.push({
+        id: 'km-011', fact: 'No information available: business cash flow position for November 2026.',
+        category: 'fact', domain: 'business', confidence: 0.0, source: 'unknown',
+        evidence: null, status: 'candidate', state: 'UNKNOWN', freshness: 'UNKNOWN',
+        support_count: 0, contradiction_count: 0, created_at: new Date().toISOString(),
+        gap: { id: 'gap-011', type: 'MISSING', severity: 'HIGH', blocks: false, status: 'OPEN' },
+        relationships: []
+      });
+    }
+    renderFeed();
+    addLog('V-KN-11: Knowledge gap MISSING (HIGH severity) — no information available for November cash flow.', true);
+    setTimeout(() => { const el = document.getElementById('card-km-011'); if (el) { el.classList.add('highlighted'); setTimeout(() => el.classList.remove('highlighted'), 2000); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 150);
+  },
+  12: () => {
+    resetFilters();
+    const exists = extraCards.find(k => k.id === 'km-012');
+    if (!exists) {
+      extraCards.push({
+        id: 'km-012', fact: 'Pending decision requires: confirmed total contract value for Client B engagement.',
+        category: 'fact', domain: 'business', confidence: 0.0, source: 'decision_engine',
+        evidence: null, status: 'candidate', state: 'UNKNOWN', freshness: 'UNKNOWN',
+        support_count: 0, contradiction_count: 0, created_at: new Date().toISOString(),
+        gap: { id: 'gap-012', type: 'DECISION_BLOCKING', severity: 'HIGH', blocks: true, status: 'OPEN' },
+        relationships: []
+      });
+    }
+    setDisclosureLevel(4);
+    renderFeed();
+    addLog('V-KN-12: DECISION_BLOCKING gap — L4 DECISION attention. Blocks pending contract decision.', true);
+    setTimeout(() => { const el = document.getElementById('card-km-012'); if (el) { el.classList.add('highlighted'); setTimeout(() => el.classList.remove('highlighted'), 2000); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); selectGap('km-012'); } }, 150);
+  },
+  13: () => {
+    resetFilters();
+    const km2 = knowledgeItems.find(k => k.id === 'km-002');
+    if (km2) km2._relevanceBoost = true;
+    setDomain('finance');
+    setDisclosureLevel(0);
+    addLog('V-KN-13: Finance domain active — finance knowledge prioritised. km-002 +0.15 relevance boost.', true);
+    setTimeout(() => { const el = document.getElementById('card-km-002'); if (el) { el.classList.add('highlighted'); setTimeout(() => el.classList.remove('highlighted'), 2000); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 100);
+  },
+  14: () => {
+    setDomain('finance');
+    setDisclosureLevel(0);
+    addLog('V-KN-14: Finance filter active — km-001 (uni), km-005 (uni) hidden from feed. Cross-domain items excluded.', true);
+  },
+  15: () => {
+    resetFilters();
+    const exists = extraCards.find(k => k.id === 'km-015');
+    if (!exists) {
+      extraCards.push({
+        id: 'km-015', fact: 'New validated fact: User completed APEX onboarding session on 2026-10-27.',
+        category: 'fact', domain: 'system', confidence: 0.90, source: 'system_event',
+        evidence: 'System event log: onboarding_complete at 09:14 UTC.', status: 'validated',
+        state: 'FULLY_KNOWN', freshness: 'CURRENT', support_count: 2, contradiction_count: 0,
+        created_at: new Date().toISOString(), gap: null, relationships: []
+      });
+    }
+    renderFeed();
+    addLog('V-KN-15: Knowledge item enters UX-08 pipeline — animating stages.', true);
+    setTimeout(() => {
+      showPipeline(() => {
+        addLog('Pipeline complete: CONTEXT → RELEVANCE → PRIORITY → PRESENT → CHANNEL');
+      });
+    }, 200);
+  },
+  16: () => {
+    resetFilters();
+    addLog('V-KN-16: Proactive surface: new validated fact — UX-09 SURFACE decision.', true);
+    showToast('L2 IN-APP', 'New knowledge confirmed', 'CS249R deadline confirmed from calendar sync', 'rgba(0,212,255,0.2)');
+  },
+  17: async () => {
+    resetFilters();
+    setDomain('finance');
+    setVoiceState('THINKING');
+    addLog('V-KN-17: Voice knowledge query initiated — THINKING…', true);
+    await delay(800);
+    setVoiceState('SPEAKING');
+    addLog('SPEAKING: "Your October food budget is £312 of £500 used — confidence 92%, source: Finance Agent."');
+    const feed = document.getElementById('knowledge-feed');
+    const bubble = document.createElement('div');
+    bubble.className = 'spoken-bubble';
+    bubble.innerHTML = `"Your October food budget is £312 of £500 used — confidence 92%, source: Finance Agent."<div class="spoken-meta">km-002 · FULLY KNOWN · Finance Agent · 92% confidence</div>`;
+    feed.insertBefore(bubble, feed.firstChild);
+    await delay(3000);
+    setVoiceState('IDLE');
+    setTimeout(() => bubble.remove(), 500);
+    addLog('Voice knowledge access complete.');
+  },
+  18: async () => {
+    setDomain('uni');
+    addLog('V-KN-18: Progressive disclosure L0 → L4 on km-005', true);
+    for (let l = 0; l <= 4; l++) {
+      setDisclosureLevel(l);
+      addLog('Disclosure level → L' + l);
+      await delay(500);
+    }
+    setTimeout(() => { const el = document.getElementById('card-km-005'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100);
+  },
+  19: () => {
+    const q = 'scaling laws';
+    document.getElementById('search-input').value = q;
+    searchResults = {
+      query: q,
+      items: [
+        { ...knowledgeItems[4], score: 0.921, method: 'hybrid BM25+pgvector' },
+        { ...knowledgeItems[0], score: 0.784, method: 'BM25' },
+        { ...knowledgeItems[2], score: 0.521, method: 'pgvector' },
+        { id: 'km-sr4', fact: 'Hoffmann et al. 2022 — Chinchilla: Training Compute-Optimal Large Language Models.', category: 'concept', domain: 'uni', source: 'vault', state: 'FULLY_KNOWN', score: 0.488, method: 'pgvector' }
+      ]
+    };
+    renderFeed();
+    addLog('V-KN-19: Search "scaling laws" — 4 results via hybrid BM25+pgvector.', true);
+  },
+  20: () => {
+    setDomain('uni');
+    setDisclosureLevel(3);
+    addLog('V-KN-20: km-005 relationships shown. RELATES_TO: CS249R Assignment 3. DERIVED_FROM: Hoffmann et al. 2022.', true);
+    setTimeout(() => {
+      const el = document.getElementById('card-km-005');
+      if (el) { el.classList.add('highlighted'); setTimeout(() => el.classList.remove('highlighted'), 2000); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    }, 100);
+  },
+  21: () => {
+    resetFilters();
+    setDomain('business');
+    const km3 = knowledgeItems.find(k => k.id === 'km-003');
+    if (km3) km3._correctionFlow = true;
+    renderFeed();
+    addLog('V-KN-21: Flag on km-003: Correction initiated → ASSUMED gap created → IN_RESOLUTION.', true);
+    setTimeout(() => { const el = document.getElementById('card-km-003'); if (el) { el.classList.add('highlighted'); setTimeout(() => el.classList.remove('highlighted'), 2500); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 100);
+  },
+  22: () => {
+    resetFilters();
+    const exists11 = extraCards.find(k => k.id === 'km-011');
+    if (!exists11) {
+      extraCards.push({ id: 'km-011', fact: 'No information: November 2026 cash flow.', category: 'fact', domain: 'business', confidence: 0.0, source: 'unknown', evidence: null, status: 'candidate', state: 'UNKNOWN', freshness: 'UNKNOWN', support_count: 0, contradiction_count: 0, created_at: new Date().toISOString(), gap: { id: 'gap-011', type: 'MISSING', severity: 'HIGH', blocks: false, status: 'OPEN' }, relationships: [] });
+    }
+    renderFeed();
+    const feed = document.getElementById('knowledge-feed');
+    const summary = document.createElement('div');
+    summary.className = 'gap-summary-panel';
+    summary.innerHTML = `<div class="panel-section-title">GAP SUMMARY — All Open Gaps</div>
+      <div class="gap-summary-row"><span class="gap-summary-id">gap-003</span><span class="gap-summary-type" style="color:#f59e0b">INCOMPLETE</span><span class="gap-summary-sev">MEDIUM</span><span class="gap-summary-status">OPEN</span></div>
+      <div class="gap-summary-row"><span class="gap-summary-id">gap-004</span><span class="gap-summary-type" style="color:#f59e0b">STALE</span><span class="gap-summary-sev">MEDIUM</span><span class="gap-summary-status">OPEN</span></div>
+      <div class="gap-summary-row"><span class="gap-summary-id">gap-006</span><span class="gap-summary-type" style="color:rgba(245,158,11,0.8)">ASSUMED</span><span class="gap-summary-sev">MEDIUM</span><span class="gap-summary-status">OPEN</span></div>
+      <div class="gap-summary-row"><span class="gap-summary-id">gap-007</span><span class="gap-summary-type" style="color:#ef4444">CONFLICTING</span><span class="gap-summary-sev">HIGH</span><span class="gap-summary-status">OPEN</span></div>
+      <div class="gap-summary-row"><span class="gap-summary-id">gap-011</span><span class="gap-summary-type" style="color:#ef4444">MISSING</span><span class="gap-summary-sev">HIGH</span><span class="gap-summary-status">OPEN</span></div>`;
+    feed.insertBefore(summary, feed.firstChild);
+    addLog('V-KN-22: Gap summary: 5 open gaps (1 HIGH CONFLICTING, 1 HIGH MISSING, 3 MEDIUM).', true);
+  },
+  23: () => {
+    setDomain('uni');
+    setDisclosureLevel(2);
+    const km5 = knowledgeItems.find(k => k.id === 'km-005');
+    if (km5) km5._intelBoundary = true;
+    renderFeed();
+    addLog('V-KN-23: Knowledge → Intelligence boundary shown. KNOWN vs INFERRED clearly distinct. UX-12.', true);
+    setTimeout(() => { const el = document.getElementById('card-km-005'); if (el) { el.classList.add('highlighted'); setTimeout(() => el.classList.remove('highlighted'), 2500); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 100);
+  },
+  24: () => {
+    setDomain('finance');
+    setDisclosureLevel(1);
+    const km2 = knowledgeItems.find(k => k.id === 'km-002');
+    if (km2) km2._agentAnnotation = true;
+    renderFeed();
+    addLog('V-KN-24: Finance Agent consuming km-002 — KNOWLEDGE → AGENT INPUT (not AGENT). UX-13 boundary.', true);
+    setTimeout(() => { const el = document.getElementById('card-km-002'); if (el) { el.classList.add('highlighted'); setTimeout(() => el.classList.remove('highlighted'), 2500); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 100);
+  },
+  25: () => {
+    setDomain('finance');
+    setDisclosureLevel(1);
+    const km2 = knowledgeItems.find(k => k.id === 'km-002');
+    if (km2) { km2._agentAnnotation = false; km2._proposalChain = true; }
+    renderFeed();
+    addLog('V-KN-25: Chain shown: km-002 (KNOWN) → Intelligence synthesis → Proposal "Create November budget" → UX-14 APPROVAL REQUIRED.', true);
+    setTimeout(() => { const el = document.getElementById('card-km-002'); if (el) { el.classList.add('highlighted'); setTimeout(() => el.classList.remove('highlighted'), 2500); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 100);
+  },
+  26: () => {
+    resetFilters();
+    setVerbosity('brief');
+    addLog('V-KN-26: Personalisation: brief mode. Evidence unchanged — available on request via Show Evidence.', true);
+    showToast('PERSONALISATION', 'Brief mode active', 'Evidence unchanged — tap Show Evidence to expand', 'rgba(124,58,237,0.2)');
+  },
+  27: () => {
+    setDomain('finance');
+    addLog('V-KN-27: Domain switch → Finance. Knowledge re-scoped.', true);
+    setTimeout(async () => {
+      await delay(1200);
+      setDomain('uni');
+      addLog('Domain switch → Uni. Same canonical store. Knowledge re-scoped.', true);
+    }, 100);
+  },
+  28: () => {
+    resetFilters();
+    knowledgeItems.forEach(k => { k._oneApex = true; });
+    extraCards.forEach(k => { k._oneApex = true; });
+    renderFeed();
+    addLog('V-KN-28: ONE APEX — canonical knowledge architecture verified. Finance and Uni in same store.', true);
+    showToast('ONE APEX', 'Canonical architecture', 'All domains share one semantic_memory store', 'rgba(0,212,255,0.15)');
+  }
+};
+
+function delay(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+function resetFilters() {
+  clearSearch();
+  knowledgeItems.forEach(k => {
+    delete k._intelBoundary; delete k._agentAnnotation; delete k._proposalChain;
+    delete k._oneApex; delete k._correctionFlow; delete k._relevanceBoost;
+  });
+  extraCards = [];
+  setDomain('global');
+  setStateFilter('ALL');
+  setGapFilter('ALL');
+  setDisclosureLevel(0);
+  setVerbosity('standard');
+  setVoiceState('IDLE');
+}
+
+// ─────────────────────────────────────────────
+// SCENARIO GRID RENDER
+// ─────────────────────────────────────────────
+function renderScenarioGrid() {
+  const grid = document.getElementById('scenario-grid');
+  grid.innerHTML = scenarioLabels.map((label, i) =>
+    `<button class="scenario-btn" onclick="runScenario(${i + 1})" title="${label} — V-KNOWLEDGE-${String(i+1).padStart(2,'0')}">${label}</button>`
+  ).join('');
+}
+
+// ─────────────────────────────────────────────
+// KEYBOARD SHORTCUTS
+// ─────────────────────────────────────────────
+const keyMap = {
+  '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
+  '0': 10,
+  'q': 11, 'w': 12, 'e': 13, 'r': 14, 't': 15,
+  'y': 16, 'u': 17, 'i': 18, 'o': 19, 'p': 20,
+  'a': 21, 's': 22, 'f': 23, 'g': 24, 'h': 25, 'j': 26, 'k': 27, 'l': 28
+};
+
+const domains = ['global', 'finance', 'uni', 'business', 'system'];
+let domainIdx = 0;
+const states = ['ALL', 'FULLY_KNOWN', 'STALE', 'CONFLICTING', 'PARTIALLY_KNOWN', 'UNKNOWN'];
+let stateIdx = 0;
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const k = e.key.toLowerCase();
+
+  if (keyMap[k]) { runScenario(keyMap[k]); return; }
+  if (k === 'd') { domainIdx = (domainIdx + 1) % domains.length; setDomain(domains[domainIdx]); return; }
+  if (k === 'z') { setDisclosureLevel((disclosureLevel + 1) % 5); return; }
+  if (k === 'c') { stateIdx = (stateIdx + 1) % states.length; setStateFilter(states[stateIdx]); return; }
+  if (k === 'v') { runScenario(17); return; }
+  if (k === 'x') { resetFilters(); activeScenario = null; document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active')); addLog('Reset to defaults.'); return; }
+});
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+function init() {
+  renderScenarioGrid();
+  renderFeed();
+  addLog('APEX UX-11 Knowledge prototype loaded — 28 scenarios ready.', true);
+  addLog('Canonical knowledge store: 7 items across 5 domains.');
+}
+
+init();
+</script>
+</body>
+</html>

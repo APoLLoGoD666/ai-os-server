@@ -1,0 +1,13 @@
+domain: DOM-000009
+events:
+  - name: GOVERNANCE_VIOLATION
+    from: DOM-000003
+    handler: src/handlers/governance-violation.js
+
+  - name: FITNESS_CHECK_FAILED
+    from: DOM-000006
+    handler: src/handlers/fitness-check-failed.js
+
+  - name: TEMPORAL_ANOMALY_DETECTED
+    from: DOM-000006
+    handler: src/handlers/temporal-anomaly.js

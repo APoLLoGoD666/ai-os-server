@@ -1,0 +1,13 @@
+id: LAW-003
+name: Constitutional Gate Integrity
+description: >
+  The CONSTITUTIONAL_GATE_HEALTHY constraint must remain PASS at all times.
+  Any change that causes this constraint to fail must be flagged as a
+  GOVERNANCE_VIOLATION and blocked until resolved.
+category: governance
+enforcement: blocking
+condition:
+  constraint: CONSTITUTIONAL_GATE_HEALTHY
+  required_status: PASS
+remedy: Restore ENT-000388 (Constitutional Gate) to ACTIVE status.
+severity: CRITICAL

@@ -1,0 +1,14 @@
+domain: DOM-000010
+events:
+  - name: ENTITY_CREATED
+    description: A new experimental entity was registered.
+    schema:
+      entity_id: string
+      name: string
+      type: string
+      experiment: string
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 1000
+    consumers:
+      - DOM-000003   # Registry registers it (with low confidence)

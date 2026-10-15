@@ -1,0 +1,18 @@
+domain: Interface
+capability: HTTP API Layer
+runtime: core
+criticality: high
+owner: Interface Layer
+entity_id: DOM-000007
+dependencies:
+  - Registry
+  - Intelligence
+  - Memory
+  - Infrastructure
+consumers:
+  - Interface
+events_emitted: []
+events_consumed:
+  - ENTITY_UPDATED
+state_version_sensitive: false
+test_suite: null

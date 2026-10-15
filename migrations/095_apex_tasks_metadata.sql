@@ -1,0 +1,1 @@
+ALTER TABLE apex_tasks ADD COLUMN IF NOT EXISTS metadata JSONB;

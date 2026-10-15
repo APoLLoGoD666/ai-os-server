@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>APEX — UX-17 ACTIVITY / OBSERVABILITY</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cinzel:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap');
+:root{
+  --apex-color-bg:#0a0a0f;--apex-color-surface:#111118;--apex-color-surface-raised:#1a1a24;
+  --apex-color-border:#2a2a3a;--apex-color-border-subtle:#1e1e2a;
+  --apex-color-text-primary:#e8e8f0;--apex-color-text-secondary:#9898b0;--apex-color-text-muted:#5a5a70;
+  --apex-color-accent:#6b6bff;--apex-color-accent-dim:#3d3d8a;
+  --apex-color-success:#22c55e;--apex-color-warning:#f59e0b;--apex-color-danger:#ef4444;--apex-color-info:#3b82f6;
+  --apex-font-sans:'Inter',system-ui,sans-serif;--apex-font-display:'Cinzel',serif;--apex-font-mono:'JetBrains Mono',monospace;
+  --apex-radius-sm:4px;--apex-radius-md:8px;--apex-radius-lg:12px;
+  --apex-spacing-1:4px;--apex-spacing-2:8px;--apex-spacing-3:12px;--apex-spacing-4:16px;--apex-spacing-6:24px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--apex-color-bg);color:var(--apex-color-text-primary);font-family:var(--apex-font-sans);font-size:13px;line-height:1.5}
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 var(--apex-spacing-6);height:52px;border-bottom:1px solid var(--apex-color-border);flex-shrink:0;background:var(--apex-color-surface)}
+.header-left{display:flex;flex-direction:column}
+.header-title{font-family:var(--apex-font-display);font-size:14px;font-weight:600;letter-spacing:0.08em}
+.header-sub{font-size:10px;color:var(--apex-color-text-muted);letter-spacing:0.14em;margin-top:1px;text-transform:uppercase}
+.header-right{display:flex;align-items:center;gap:var(--apex-spacing-4)}
+.waveform{display:flex;align-items:flex-end;gap:3px;height:18px}
+.waveform-bar{width:3px;border-radius:2px 2px 0 0;background:var(--apex-color-accent);animation:wave 0.48s ease-in-out infinite alternate}
+.waveform-bar:nth-child(2){animation-delay:0.08s}.waveform-bar:nth-child(3){animation-delay:0.16s}.waveform-bar:nth-child(4){animation-delay:0.24s}.waveform-bar:nth-child(5){animation-delay:0.32s}
+@keyframes wave{from{transform:scaleY(0.25)}to{transform:scaleY(1)}}
+@media(prefers-reduced-motion:reduce){.waveform-bar,.conn-dot{animation:none!important}}
+/* CONNECTION STATUS */
+.conn-status{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase}
+.conn-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.conn-live .conn-dot{background:var(--apex-color-success)}
+.conn-live{color:var(--apex-color-success)}
+.conn-degraded .conn-dot{background:var(--apex-color-warning)}
+.conn-degraded{color:var(--apex-color-warning)}
+.conn-disconnected .conn-dot{background:var(--apex-color-danger)}
+.conn-disconnected{color:var(--apex-color-danger)}
+.conn-reconnecting .conn-dot{background:var(--apex-color-warning);animation:pulse 1s ease-in-out infinite}
+.conn-reconnecting{color:var(--apex-color-warning)}
+.conn-stale .conn-dot{background:var(--apex-color-warning)}
+.conn-stale{color:var(--apex-color-warning)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+/* BODY */
+.body{display:flex;flex:1;overflow:hidden}
+/* LEFT PANEL */
+.panel-left{width:260px;border-right:1px solid var(--apex-color-border);display:flex;flex-direction:column;flex-shrink:0;background:var(--apex-color-surface);overflow:hidden}
+.panel-label{font-size:10px;font-weight:600;letter-spacing:0.12em;color:var(--apex-color-text-muted);padding:var(--apex-spacing-3) var(--apex-spacing-4);border-bottom:1px solid var(--apex-color-border-subtle);text-transform:uppercase;flex-shrink:0}
+.scenarios-list{flex:1;overflow-y:auto;padding:var(--apex-spacing-1)}
+.scenario-item{display:flex;gap:var(--apex-spacing-2);padding:5px var(--apex-spacing-2);border-radius:var(--apex-radius-sm);cursor:pointer;border:1px solid transparent;margin-bottom:1px;transition:background 0.1s;align-items:flex-start}
+.scenario-item:hover{background:var(--apex-color-surface-raised)}
+.scenario-item.active{background:var(--apex-color-surface-raised);border-color:var(--apex-color-accent-dim)}
+.scenario-num{font-family:var(--apex-font-mono);font-size:9px;color:var(--apex-color-text-muted);width:28px;flex-shrink:0;padding-top:1px}
+.scenario-name{font-size:11px;color:var(--apex-color-text-secondary);line-height:1.4}
+/* CATEGORY FILTERS */
+.cat-filters{border-top:1px solid var(--apex-color-border);padding:var(--apex-spacing-2);display:flex;flex-wrap:wrap;gap:4px;flex-shrink:0}
+.cat-pill{font-size:9px;font-weight:600;padding:2px 7px;border-radius:10px;border:1px solid var(--apex-color-border);color:var(--apex-color-text-muted);cursor:pointer;letter-spacing:0.06em;text-transform:uppercase;transition:all 0.15s;background:transparent}
+.cat-pill:hover{border-color:var(--apex-color-accent-dim);color:var(--apex-color-text-secondary)}
+.cat-pill.active{background:var(--apex-color-accent-dim);border-color:var(--apex-color-accent);color:var(--apex-color-text-primary)}
+/* CENTRE PANEL */
+.panel-centre{flex:1;display:flex;flex-direction:column;overflow:hidden}
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:var(--apex-spacing-3);padding:var(--apex-spacing-2) var(--apex-spacing-4);border-bottom:1px solid var(--apex-color-border);flex-shrink:0;flex-wrap:wrap}
+.search-box{flex:1;min-width:160px;max-width:280px;background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-sm);padding:4px 10px;color:var(--apex-color-text-primary);font-family:var(--apex-font-sans);font-size:11px;outline:none}
+.search-box:focus{border-color:var(--apex-color-accent)}
+.search-box::placeholder{color:var(--apex-color-text-muted)}
+.dl-row{display:flex;align-items:center;gap:3px}
+.dl-label{font-size:9px;color:var(--apex-color-text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-right:4px}
+.dl-btn{padding:3px 8px;border-radius:var(--apex-radius-sm);border:1px solid var(--apex-color-border);background:transparent;color:var(--apex-color-text-muted);cursor:pointer;font-size:10px;font-weight:600;transition:all 0.15s;font-family:var(--apex-font-sans)}
+.dl-btn:hover{color:var(--apex-color-text-secondary)}
+.dl-btn.active{background:var(--apex-color-accent);border-color:var(--apex-color-accent);color:#fff}
+.live-btn{padding:3px 10px;border-radius:var(--apex-radius-sm);border:1px solid var(--apex-color-border);background:transparent;color:var(--apex-color-text-muted);cursor:pointer;font-size:10px;font-weight:600;letter-spacing:0.06em;transition:all 0.15s;font-family:var(--apex-font-sans)}
+.live-btn.active{background:#0a2a1a;border-color:#22c55e55;color:var(--apex-color-success)}
+/* STALE BANNER */
+.stale-banner{background:#2a1a0a;border-bottom:1px solid #f59e0b55;padding:6px var(--apex-spacing-4);font-size:11px;color:var(--apex-color-warning);display:none;flex-shrink:0}
+.stale-banner.visible{display:block}
+/* STREAM */
+.stream-area{flex:1;overflow-y:auto;padding:var(--apex-spacing-3) var(--apex-spacing-4)}
+.stream-empty{text-align:center;padding:40px;color:var(--apex-color-text-muted);font-size:12px}
+/* EVENT CARD */
+.event-card{background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);margin-bottom:var(--apex-spacing-2);cursor:pointer;transition:border-color 0.15s;position:relative}
+.event-card:hover{border-color:var(--apex-color-accent-dim)}
+.event-card.active{border-color:var(--apex-color-accent);background:#16162a}
+.event-card.live-new{animation:slideIn 0.3s ease-out}
+@keyframes slideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.event-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--apex-spacing-2);margin-bottom:6px}
+.event-card-badges{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.event-card-time{font-size:10px;color:var(--apex-color-text-muted);font-family:var(--apex-font-mono);flex-shrink:0}
+.event-card-desc{font-size:12px;color:var(--apex-color-text-primary);line-height:1.4;margin-bottom:4px}
+.event-card-meta{display:flex;align-items:center;gap:var(--apex-spacing-3);font-size:10px;color:var(--apex-color-text-muted)}
+.event-card-meta span{display:flex;align-items:center;gap:3px}
+.stale-tag{font-size:9px;font-weight:700;color:var(--apex-color-warning);border:1px solid #f59e0b55;border-radius:3px;padding:1px 5px;margin-left:4px}
+/* RIGHT PANEL */
+.panel-right{width:320px;border-left:1px solid var(--apex-color-border);display:flex;flex-direction:column;flex-shrink:0;background:var(--apex-color-surface);overflow:hidden}
+.detail-tabs{display:flex;border-bottom:1px solid var(--apex-color-border);flex-shrink:0}
+.detail-tab{flex:1;padding:8px 4px;text-align:center;font-size:10px;font-weight:600;color:var(--apex-color-text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;letter-spacing:0.06em}
+.detail-tab:hover{color:var(--apex-color-text-secondary)}
+.detail-tab.active{color:var(--apex-color-accent);border-bottom-color:var(--apex-color-accent)}
+.detail-content{flex:1;overflow-y:auto;padding:var(--apex-spacing-3)}
+.detail-empty{text-align:center;padding:40px 20px;color:var(--apex-color-text-muted);font-size:11px}
+/* DETAIL COMPONENTS */
+.detail-section{margin-bottom:var(--apex-spacing-3)}
+.detail-section-label{font-size:9px;font-weight:600;letter-spacing:0.12em;color:var(--apex-color-text-muted);text-transform:uppercase;margin-bottom:var(--apex-spacing-2)}
+.detail-row{display:flex;justify-content:space-between;align-items:flex-start;padding:3px 0;border-bottom:1px solid var(--apex-color-border-subtle);font-size:11px}
+.detail-row:last-child{border-bottom:none}
+.detail-key{color:var(--apex-color-text-muted);flex-shrink:0;width:100px}
+.detail-val{color:var(--apex-color-text-secondary);text-align:right;word-break:break-all}
+.detail-val.mono{font-family:var(--apex-font-mono);font-size:10px}
+.detail-summary{font-size:13px;color:var(--apex-color-text-primary);line-height:1.6;padding:var(--apex-spacing-3);background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-md);margin-bottom:var(--apex-spacing-3)}
+/* BLOCKS */
+.evidence-block,.provenance-block{background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);font-family:var(--apex-font-mono);font-size:10px;margin-bottom:var(--apex-spacing-2)}
+.ev-row{display:flex;gap:var(--apex-spacing-2);padding:2px 0;color:var(--apex-color-text-secondary)}
+.ev-key{color:var(--apex-color-text-muted);width:110px;flex-shrink:0}
+.warn-block{background:#2a1a0a;border:1px solid #f59e0b55;border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);margin-bottom:var(--apex-spacing-2)}
+.warn-block p{font-size:11px;color:#fcd34d;line-height:1.5}
+.warn-title{font-size:11px;font-weight:600;color:var(--apex-color-warning);margin-bottom:4px}
+.danger-block{background:#2a0a0a;border:1px solid #ef444455;border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);margin-bottom:var(--apex-spacing-2)}
+.danger-block p{font-size:11px;color:#fca5a5;line-height:1.5}
+.success-block{background:#0a2a1a;border:1px solid #22c55e55;border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);margin-bottom:var(--apex-spacing-2)}
+.success-block p{font-size:11px;color:#86efac;line-height:1.5}
+.info-block{background:#0a1a2a;border:1px solid #3b82f655;border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);margin-bottom:var(--apex-spacing-2)}
+.info-block p{font-size:11px;color:#93c5fd;line-height:1.5}
+/* PRIVACY BOUNDARY */
+.privacy-boundary{background:#16001a;border:1px solid #9333ea55;border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);margin-bottom:var(--apex-spacing-2);text-align:center}
+.privacy-boundary .pb-icon{font-size:20px;color:#a855f7;margin-bottom:4px}
+.privacy-boundary .pb-title{font-size:11px;font-weight:600;color:#a855f7;margin-bottom:4px;letter-spacing:0.08em;text-transform:uppercase}
+.privacy-boundary p{font-size:11px;color:#c084fc;line-height:1.5}
+/* CORRELATION CHAIN */
+.corr-chain{display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:var(--apex-spacing-2);background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-md);margin-bottom:var(--apex-spacing-2)}
+.corr-node{font-family:var(--apex-font-mono);font-size:9px;padding:3px 7px;border-radius:var(--apex-radius-sm);background:var(--apex-color-accent-dim);color:var(--apex-color-accent);border:1px solid var(--apex-color-accent-dim)}
+.corr-arrow{color:var(--apex-color-text-muted);font-size:12px}
+/* LIFECYCLE PROGRESSION */
+.lifecycle-chain{display:flex;flex-direction:column;gap:3px;margin-bottom:var(--apex-spacing-2)}
+.lc-step{display:flex;align-items:center;gap:var(--apex-spacing-2);padding:5px var(--apex-spacing-2);border-radius:var(--apex-radius-sm);border:1px solid var(--apex-color-border-subtle);font-size:11px}
+.lc-step.done{color:var(--apex-color-success);border-color:#22c55e33;background:#0a2a1a}
+.lc-step.active{color:var(--apex-color-text-primary);border-color:var(--apex-color-accent);background:var(--apex-color-accent-dim)}
+.lc-step.pending{color:var(--apex-color-text-muted);background:transparent}
+.lc-step.failed{color:var(--apex-color-danger);border-color:#ef444433;background:#2a0a0a}
+.lc-icon{font-size:12px;width:16px;text-align:center}
+/* RELATED RECORDS */
+.related-list{display:flex;flex-direction:column;gap:4px;margin-bottom:var(--apex-spacing-2)}
+.related-item{display:flex;align-items:center;justify-content:space-between;padding:5px var(--apex-spacing-2);background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-sm);font-size:11px}
+.related-item-label{color:var(--apex-color-text-secondary)}
+.related-item-id{font-family:var(--apex-font-mono);font-size:9px;color:var(--apex-color-accent)}
+/* BADGES */
+.badge{display:inline-flex;align-items:center;font-size:9px;font-weight:600;padding:2px 6px;border-radius:10px;letter-spacing:0.06em;text-transform:uppercase}
+.badge-system{background:#1a1a2a;color:var(--apex-color-text-secondary);border:1px solid var(--apex-color-border)}
+.badge-runtime{background:#0a1a2a;color:#60a5fa;border:1px solid #3b82f633}
+.badge-constitutional{background:#1a0a2a;color:#a78bfa;border:1px solid #7c3aed33}
+.badge-governance{background:#1a100a;color:#fb923c;border:1px solid #ea580c33}
+.badge-decision{background:#0a1a2a;color:var(--apex-color-info);border:1px solid #3b82f644}
+.badge-agent{background:#1a1a0a;color:#facc15;border:1px solid #ca8a0433}
+.badge-action{background:#0a2a1a;color:var(--apex-color-success);border:1px solid #22c55e33}
+.badge-approval{background:#2a1a0a;color:var(--apex-color-warning);border:1px solid #f59e0b33}
+.badge-tool{background:#1a0a1a;color:#f0abfc;border:1px solid #d946ef33}
+.badge-memory{background:#0a1a2a;color:#67e8f9;border:1px solid #06b6d433}
+.badge-knowledge{background:#0a2a1a;color:#4ade80;border:1px solid #16a34a33}
+.badge-voice{background:#1a1a2a;color:var(--apex-color-accent);border:1px solid var(--apex-color-accent-dim)}
+.badge-communication{background:#1a0a2a;color:#c084fc;border:1px solid #9333ea33}
+.badge-notification{background:#1a1a0a;color:#fbbf24;border:1px solid #d97706333}
+.badge-error{background:#2a0a0a;color:var(--apex-color-danger);border:1px solid #ef444433}
+.badge-security{background:#2a0a0a;color:#f87171;border:1px solid #ef444433}
+.badge-user{background:#0a1a2a;color:#38bdf8;border:1px solid #0284c733}
+.badge-unknown{background:#1a1a2a;color:var(--apex-color-text-muted);border:1px solid var(--apex-color-border)}
+/* LIFECYCLE STATE BADGES */
+.lstate{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:0.08em;text-transform:uppercase}
+.lstate-created{background:#1a1a2a;color:var(--apex-color-text-muted);border:1px solid var(--apex-color-border)}
+.lstate-queued{background:var(--apex-color-accent-dim);color:var(--apex-color-accent);border:1px solid var(--apex-color-accent-dim)}
+.lstate-started{background:#0a1a2a;color:var(--apex-color-info);border:1px solid #3b82f633}
+.lstate-in_progress{background:var(--apex-color-accent-dim);color:var(--apex-color-accent);border:1px solid var(--apex-color-accent)}
+.lstate-waiting{background:#2a1a0a;color:var(--apex-color-warning);border:1px solid #f59e0b55}
+.lstate-awaiting_approval{background:#2a1a0a;color:var(--apex-color-warning);border:1px solid #f59e0b77;animation:apulse 2s ease-in-out infinite}
+@keyframes apulse{0%,100%{opacity:1}50%{opacity:0.65}}
+.lstate-blocked{background:#2a0a0a;color:var(--apex-color-danger);border:1px solid #ef444455}
+.lstate-completed{background:#0a2a1a;color:var(--apex-color-success);border:1px solid #22c55e55}
+.lstate-failed{background:#2a0a0a;color:var(--apex-color-danger);border:1px solid #ef444455}
+.lstate-cancelled{background:#1a1a2a;color:var(--apex-color-text-muted);border:1px solid var(--apex-color-border);text-decoration:line-through}
+.lstate-deferred{background:#0a1a2a;color:var(--apex-color-text-secondary);border:1px solid #3b82f633}
+.lstate-expired{background:#1a1a2a;color:var(--apex-color-text-muted);border:1px solid var(--apex-color-border);text-decoration:line-through}
+.lstate-proposed{background:#1a1a2a;color:var(--apex-color-text-secondary);border:1px solid var(--apex-color-border)}
+.lstate-approved{background:#0a2a1a;color:var(--apex-color-success);border:1px solid #22c55e44}
+.lstate-executing{background:var(--apex-color-accent-dim);color:var(--apex-color-accent);border:1px solid var(--apex-color-accent)}
+.lstate-executed{background:#0a2a1a;color:var(--apex-color-success);border:1px solid #22c55e55}
+.lstate-not_executed{background:#1a1a2a;color:var(--apex-color-text-muted);border:1px solid var(--apex-color-border)}
+/* SEVERITY DOTS */
+.sev{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block}
+.sev-info{background:var(--apex-color-info)}
+.sev-warning{background:var(--apex-color-warning)}
+.sev-error{background:var(--apex-color-danger)}
+.sev-critical{background:#dc2626;box-shadow:0 0 4px #dc262688}
+/* NOTES BANNER */
+.scenario-note{background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border-subtle);border-radius:var(--apex-radius-sm);padding:6px var(--apex-spacing-3);font-size:10px;color:var(--apex-color-text-muted);margin-bottom:var(--apex-spacing-3);line-height:1.5}
+/* TABLES */
+table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:var(--apex-spacing-2)}
+th{text-align:left;padding:5px 7px;border-bottom:1px solid var(--apex-color-border);color:var(--apex-color-text-muted);font-weight:600;font-size:9px;letter-spacing:0.08em;text-transform:uppercase}
+td{padding:5px 7px;border-bottom:1px solid var(--apex-color-border-subtle);color:var(--apex-color-text-secondary);vertical-align:top}
+tr:last-child td{border-bottom:none}
+/* SCROLLBARS */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--apex-color-border);border-radius:2px}
+/* FOCUS */
+:focus-visible{outline:2px solid var(--apex-color-accent);outline-offset:2px}
+/* DISCONNECTED OVERLAY */
+.disconnected-banner{background:#2a0a0a;border-bottom:1px solid #ef444455;padding:8px var(--apex-spacing-4);font-size:11px;color:var(--apex-color-danger);display:none;flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+.disconnected-banner.visible{display:flex}
+.disconnected-banner button{font-size:10px;padding:3px 10px;border-radius:var(--apex-radius-sm);border:1px solid #ef444455;background:transparent;color:var(--apex-color-danger);cursor:pointer;font-family:var(--apex-font-sans)}
+</style>
+</head>
+<body>
+<div class="app" role="application" aria-label="APEX Activity and Observability">
+
+<!-- HEADER -->
+<header class="header" role="banner">
+  <div class="header-left">
+    <div class="header-title">APEX</div>
+    <div class="header-sub">Activity / Observability — UX-17 — Prototype</div>
+  </div>
+  <div class="header-right">
+    <div class="waveform" aria-hidden="true">
+      <div class="waveform-bar"></div><div class="waveform-bar"></div><div class="waveform-bar"></div>
+      <div class="waveform-bar"></div><div class="waveform-bar"></div>
+    </div>
+    <div id="connStatus" class="conn-status conn-live" role="status" aria-live="polite" aria-label="Connection status: LIVE">
+      <div class="conn-dot"></div><span id="connLabel">LIVE</span>
+    </div>
+  </div>
+</header>
+
+<!-- BODY -->
+<div class="body">
+
+  <!-- LEFT PANEL: SCENARIOS + CATEGORY FILTERS -->
+  <aside class="panel-left" role="complementary" aria-label="Scenarios and filters">
+    <div class="panel-label">Scenarios</div>
+    <ul class="scenarios-list" id="scenariosList" role="list" aria-label="Activity scenarios"></ul>
+    <div class="panel-label" style="border-top:1px solid var(--apex-color-border)">Category Filter</div>
+    <div class="cat-filters" id="catFilters" role="group" aria-label="Filter by category"></div>
+  </aside>
+
+  <!-- CENTRE PANEL: TOOLBAR + STREAM -->
+  <main class="panel-centre" role="main" aria-label="Activity stream">
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <input class="search-box" type="search" id="searchBox" placeholder="Search events…" aria-label="Search events" oninput="onSearch(this.value)">
+      <div class="dl-row" role="group" aria-label="Disclosure level">
+        <span class="dl-label">Level</span>
+        <button class="dl-btn active" onclick="setDisclosure(0)" id="dl0" aria-pressed="true">L0</button>
+        <button class="dl-btn" onclick="setDisclosure(1)" id="dl1" aria-pressed="false">L1</button>
+        <button class="dl-btn" onclick="setDisclosure(2)" id="dl2" aria-pressed="false">L2</button>
+        <button class="dl-btn" onclick="setDisclosure(3)" id="dl3" aria-pressed="false">L3</button>
+        <button class="dl-btn" onclick="setDisclosure(4)" id="dl4" aria-pressed="false">L4</button>
+      </div>
+      <button class="live-btn" id="liveBtn" onclick="toggleLive()" aria-pressed="false">⬤ LIVE</button>
+    </div>
+    <!-- STALE / DISCONNECTED BANNERS -->
+    <div class="stale-banner" id="staleBanner" role="alert" aria-live="assertive">⚠ Data may be stale — last live update: <span id="staleAge">0s</span> ago. Showing cached events.</div>
+    <div class="disconnected-banner" id="disconnBanner" role="alert" aria-live="assertive" style="display:none">
+      <span>✕ WebSocket disconnected — no live events. Historical data shown.</span>
+      <button onclick="simulateReconnect()">Reconnect</button>
+    </div>
+    <!-- STREAM -->
+    <div class="stream-area" id="streamArea" role="log" aria-label="Activity event stream" aria-live="polite"></div>
+  </main>
+
+  <!-- RIGHT PANEL: EVENT DETAIL -->
+  <aside class="panel-right" role="complementary" aria-label="Event detail">
+    <div class="panel-label">Event Detail</div>
+    <div class="detail-tabs" role="tablist" aria-label="Disclosure levels">
+      <div class="detail-tab active" id="rt0" onclick="setDisclosure(0)" role="tab" aria-selected="true" tabindex="0">L0</div>
+      <div class="detail-tab" id="rt1" onclick="setDisclosure(1)" role="tab" aria-selected="false" tabindex="-1">L1</div>
+      <div class="detail-tab" id="rt2" onclick="setDisclosure(2)" role="tab" aria-selected="false" tabindex="-1">L2</div>
+      <div class="detail-tab" id="rt3" onclick="setDisclosure(3)" role="tab" aria-selected="false" tabindex="-1">L3</div>
+      <div class="detail-tab" id="rt4" onclick="setDisclosure(4)" role="tab" aria-selected="false" tabindex="-1">L4</div>
+    </div>
+    <div class="detail-content" id="detailContent">
+      <div class="detail-empty">Select an event or scenario to view detail.</div>
+    </div>
+  </aside>
+
+</div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let activeScenario = 0;
+let disclosureLevel = 0;
+let liveMode = false;
+let liveInterval = null;
+let liveCount = 0;
+let catFilter = null;
+let searchQuery = '';
+let staleTimer = null;
+let staleSeconds = 0;
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+const ts = (offset=0) => {
+  const d = new Date(Date.now() - offset*1000);
+  return d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+};
+const tsFull = (offset=0) => {
+  const d = new Date(Date.now() - offset*1000);
+  return d.toISOString().replace('T',' ').substring(0,19)+'Z';
+};
+const badge = (cls,text) => `<span class="badge badge-${cls}" role="img" aria-label="${cls}: ${text}">${text}</span>`;
+const lstate = (cls,text) => `<span class="lstate lstate-${cls}" role="status" aria-label="State: ${text}">${text}</span>`;
+const sev = (cls,label) => `<span class="sev sev-${cls}" title="${label}" aria-label="Severity: ${label}"></span><span style="font-size:9px;color:var(--apex-color-text-muted)">${label}</span>`;
+
+function evCard(cat,state,desc,actor,ts,sev_cls='info',extra='',isNew=false){
+  const staleTag = globalStale ? '<span class="stale-tag">⚠ STALE</span>' : '';
+  return `<div class="event-card${isNew?' live-new':''}" onclick="selectCard(this)" role="listitem" tabindex="0" aria-label="${desc}">
+    <div class="event-card-top">
+      <div class="event-card-badges">${badge(cat.toLowerCase(),cat)} ${lstate(state.toLowerCase(),state)} <span class="sev sev-${sev_cls}" title="${sev_cls}" aria-label="Severity ${sev_cls}"></span>${staleTag}</div>
+      <time class="event-card-time" datetime="${tsFull()}">${ts}</time>
+    </div>
+    <div class="event-card-desc">${desc}</div>
+    <div class="event-card-meta">
+      <span>👤 ${actor}</span>${extra}
+    </div>
+  </div>`;
+}
+
+let globalStale = false;
+let selectedCard = null;
+function selectCard(el){
+  if(selectedCard) selectedCard.classList.remove('active');
+  el.classList.add('active');
+  selectedCard = el;
+}
+
+// ─── CATEGORIES ───────────────────────────────────────────────────────────────
+const CATEGORIES = ['SYSTEM','RUNTIME','CONSTITUTIONAL','GOVERNANCE','DECISION','AGENT','ACTION','APPROVAL','TOOL','MEMORY','KNOWLEDGE','VOICE','COMMUNICATION','NOTIFICATION','ERROR','SECURITY','USER'];
+
+// ─── SCENARIOS ───────────────────────────────────────────────────────────────
+const SCENARIOS = [
+{id:'V-ACTIVITY-01',name:'Live Event',connState:'LIVE',stale:false,
+ notes:'A live agent event arriving in real time via /ws/viz. Shows pulse animation, live connection indicator, and event entering the stream top.',
+ stream:()=>[
+  evCard('AGENT','IN_PROGRESS','Agent pipeline processing task T-2847: Research market opportunity','apex-agent-01',ts(1),'info','<span>Domain: BUSINESS</span>',true),
+  evCard('TOOL','COMPLETED','Tool web_search invoked — 5 results returned','apex-agent-01',ts(4),'info','<span>Parent: T-2847</span>'),
+  evCard('MEMORY','COMPLETED','Memory checkpoint saved for session-S-0512','system',ts(8),'info',''),
+ ],
+ detail:{
+  l0:'An agent event is live — APEX is currently processing a task.',
+  l1:{when:tsFull(1),where:'Agent pipeline / /ws/viz channel',by:'apex-agent-01 (Agent)'},
+  l2:{type:'AGENT_STARTED',task_id:'T-2847',objective:'Research market opportunity',model:'claude-sonnet-4-6',stage:'1/4',severity:'INFO'},
+  l3:{evidence:{source:'lib/event-bus.js',event_type:'AGENT_STARTED',ring_position:187},provenance:{origin:'auto-pipeline',captured_at:tsFull(1),trace_id:'NOT AVAILABLE'},related:['Task T-2847','Session S-0512'],correlation:'NOT AVAILABLE — in-memory bus has no correlation_id field'},
+  l4:{constitutional:'NOT EVALUATED at event emission',governance:'NOT APPLICABLE',execution:'EXECUTING — task is in progress, not yet EXECUTED',privacy:'⊘ Internal reasoning not exposed. State is observable; chain-of-thought is not.'}
+ }
+},
+{id:'V-ACTIVITY-02',name:'Recent Activity',connState:'LIVE',stale:false,
+ notes:'A populated stream of 8 recent completed events across multiple categories from the last 2 hours.',
+ stream:()=>[
+  evCard('AGENT','COMPLETED','Task T-2822 completed — financial summary generated','apex-agent-fin',ts(120),'info','<span>Duration: 94s</span>'),
+  evCard('TOOL','COMPLETED','Tool calendar_sync executed — 3 events imported','apex-agent-cal',ts(900),'info','<span>Domain: OPERATIONS</span>'),
+  evCard('MEMORY','COMPLETED','Memory consolidated — 7 records merged','system',ts(1800),'info',''),
+  evCard('VOICE','COMPLETED','Voice session completed — intent classified: briefing','user',ts(2700),'info','<span>Duration: 6.1s</span>'),
+  evCard('KNOWLEDGE','COMPLETED','Knowledge updated — ANTHR-Q3-2026 validated','apex-agent-res',ts(3600),'info','<span>Domain: KNOWLEDGE</span>'),
+  evCard('NOTIFICATION','COMPLETED','Notification delivered — Pipeline T-2822 complete','system',ts(4200),'info',''),
+  evCard('DECISION','COMPLETED','Decision evaluated — portfolio allocation reviewed','apex-agent-fin',ts(5400),'info','<span>State: AWAITING_APPROVAL</span>'),
+  evCard('ACTION','COMPLETED','Action CALENDAR_CREATE executed — "Strategy Review" created','apex-agent-cal',ts(6300),'info',''),
+ ],
+ detail:{
+  l0:'8 recent events across 8 categories in the last 2 hours.',
+  l1:{when:'Last 2 hours',where:'All surfaces',by:'Multiple agents + system'},
+  l2:{categories:'AGENT, TOOL, MEMORY, VOICE, KNOWLEDGE, NOTIFICATION, DECISION, ACTION',completed:8,failed:0,errors:0,source_tables:'apex_timeline, apex_agent_runs, notifications'},
+  l3:{evidence:{source:'apex_timeline + notifications tables',query:'/api/timeline + /api/notifications',limit:'20 recent'},provenance:{origin:'Multiple pipeline runs',correlation:'NOT AVAILABLE — no cross-event correlation_id in production'},related:['Task T-2822','Session S-0512'],note:'Production /api/timeline returns last 20 completed tasks only.'},
+  l4:{constitutional:'N/A — completed events',governance:'N/A',execution:'All shown events are COMPLETED or EXECUTED — not merely proposed',privacy:'No chain-of-thought exposed.'}
+ }
+},
+{id:'V-ACTIVITY-03',name:'Historical Activity',connState:'LIVE',stale:false,
+ notes:'Events from 7 days ago. Time range: 7D. Historical data — no live stream. Production retention limited by /api/timeline 20-row limit.',
+ stream:()=>[
+  evCard('AGENT','COMPLETED','Task T-2701 completed — weekly briefing generated','apex-agent-brief',ts(7*86400),'info','<span>7 days ago</span>'),
+  evCard('AGENT','COMPLETED','Task T-2702 completed — Notion sync','apex-agent-notion',ts(7*86400+3600),'info',''),
+  evCard('ERROR','FAILED','Task T-2703 failed — OpenAI rate limit','apex-agent-res',ts(7*86400+7200),'error',''),
+  evCard('CONSTITUTIONAL','COMPLETED','Constitutional check — A3-OWNERSHIP — ALLOW','system',ts(7*86400+10800),'info',''),
+  evCard('GOVERNANCE','COMPLETED','Governance evaluation — FINANCE domain — PASS','system',ts(7*86400+14400),'info',''),
+  evCard('AGENT','FAILED','Task T-2705 failed — context window exceeded','apex-agent-res',ts(7*86400+18000),'error',''),
+  evCard('ACTION','COMPLETED','Action EMAIL_SEND executed — weekly report delivered','apex-agent-comm',ts(7*86400+21600),'info',''),
+ ],
+ detail:{
+  l0:'Historical activity from 7 days ago.',
+  l1:{when:'7 days ago (~'+tsFull(7*86400)+')',where:'Pipeline + Constitutional surface',by:'Multiple agents'},
+  l2:{time_range:'7D',events_shown:7,note:'PRODUCTION GAP: /api/timeline returns last 20 rows only. No historical search API exists in production. This prototype demonstrates the intended surface.'},
+  l3:{evidence:{source:'apex_timeline (production)',limitation:'20-row limit — older records not queryable via current API'},provenance:{note:'Historical events: provenance as recorded in apex_timeline. Fields not stored: correlation_id, causation_id.'},related:[]},
+  l4:{constitutional:'Constitutional records exist in separate store — not linked to timeline rows in production.',governance:'Governance records not linked to timeline rows in production.',privacy:'Chain-of-thought not stored in apex_timeline — protected by design.'}
+ }
+},
+{id:'V-ACTIVITY-04',name:'Category Filter',connState:'LIVE',stale:false,
+ notes:'Category filter active: AGENT only. Other categories excluded from stream. Filter pills are interactive.',
+ stream:()=>[
+  evCard('AGENT','COMPLETED','Task T-2822 completed — financial summary','apex-agent-fin',ts(60),'info',''),
+  evCard('AGENT','IN_PROGRESS','Task T-2847 in progress — market research','apex-agent-01',ts(10),'info',''),
+  evCard('AGENT','FAILED','Task T-2830 failed — API timeout','apex-agent-res',ts(300),'error',''),
+  evCard('AGENT','QUEUED','Task T-2851 queued — email triage','apex-agent-email',ts(5),'info','<span>Queue: 1</span>'),
+ ],
+ detail:{
+  l0:'Filter active: AGENT category only. 4 agent events shown.',
+  l1:{when:'Last hour',where:'Agent pipeline',by:'apex-agent-fin, apex-agent-01, apex-agent-res, apex-agent-email'},
+  l2:{filter:'Category = AGENT',matched:4,hidden_categories:'TOOL, MEMORY, VOICE, KNOWLEDGE, NOTIFICATION, DECISION, ACTION, SYSTEM, CONSTITUTIONAL, GOVERNANCE, ERROR, SECURITY, USER, RUNTIME, APPROVAL, COMMUNICATION',note:'Filter does not alter underlying event records — display only.'},
+  l3:{evidence:{note:'Filtered view of apex_timeline. Source data unchanged.'},provenance:{note:'Events as recorded — filter is presentation layer only.'},related:[]},
+  l4:{note:'Filtering is a presentation concern only. It does not alter the canonical event record, governance, or constitutional state.'}
+ }
+},
+{id:'V-ACTIVITY-05',name:'Event Search',connState:'LIVE',stale:false,
+ notes:'Search query: "email". Returns 3 matching events across categories.',
+ stream:()=>[
+  evCard('AGENT','COMPLETED','EMAIL_PARSED — email from finance@client.com classified as INVOICE','apex-agent-email',ts(120),'info','<span>Domain: FINANCE</span>'),
+  evCard('NOTIFICATION','COMPLETED','Notification sent — email ingestion complete (3 messages)','system',ts(180),'info',''),
+  evCard('TOOL','COMPLETED','Tool calendar_sync — email meeting imported as calendar event','apex-agent-cal',ts(240),'info',''),
+ ],
+ detail:{
+  l0:'Search: "email" — 3 matching events found.',
+  l1:{query:'email',matched:3,categories:'AGENT, NOTIFICATION, TOOL'},
+  l2:{note:'PRODUCTION GAP: No event search API exists in production. /api/timeline and /api/notifications have no search parameter. This demonstrates the intended search surface.'},
+  l3:{evidence:{production_gap:'No search API in production'},provenance:{note:'Search results would be derived from apex_timeline + notifications tables with ILIKE query on objective/message fields.'},related:[]},
+  l4:{note:'Search is a presentation concern. It does not reindex or alter events.'}
+ }
+},
+{id:'V-ACTIVITY-06',name:'Event Detail (L0)',connState:'LIVE',stale:false,
+ notes:'L0 disclosure only. Single sentence answer to "What happened?". No metadata, no timestamps, no actors.',
+ stream:()=>[
+  evCard('AGENT','COMPLETED','Task T-2822 completed — weekly financial summary generated','apex-agent-fin',ts(60),'info',''),
+ ],
+ detail:{
+  l0:'An agent completed a task.',
+  l1:{note:'Select L1 to see when, where, and by whom.'},
+  l2:{note:'Select L2 for metadata.'},
+  l3:{note:'Select L3 for evidence and provenance.'},
+  l4:{note:'Select L4 for constitutional and governance detail.'}
+ }
+},
+{id:'V-ACTIVITY-07',name:'Actor Visibility',connState:'LIVE',stale:false,
+ notes:'Actor-focused event. Shows full actor context: type, ID, name, capability, domain.',
+ stream:()=>[
+  evCard('AGENT','COMPLETED','EMAIL_PARSED — classified: INVOICE from finance@client.com','apex-agent-email-01',ts(30),'info','<span>Capability: email-processing</span>'),
+ ],
+ detail:{
+  l0:'An agent actor processed an email.',
+  l1:{when:tsFull(30),where:'Email pipeline',by:'apex-agent-email-01'},
+  l2:{actor_type:'AGENT',actor_id:'apex-agent-email-01',actor_name:'Email Intelligence Agent',capability:'email-processing',domain:'COMMUNICATION',authority_context:'Operates under A1-IDENTITY scope',event_type:'EMAIL_PARSED'},
+  l3:{evidence:{actor_source:'agent-registry (runtime)',capability_verified:'YES',authority_scope:'COMMUNICATION domain only'},provenance:{origin:'lib/event-bus.js AGENT_COMPLETED event',captured_at:tsFull(30)},related:['Notification N-0091','Task T-2840']},
+  l4:{constitutional:'Actor operates within A1-IDENTITY + A3-OWNERSHIP authority. Constitutional gate: ALLOW.',governance:'COMMUNICATION domain — standard governance. No escalation required.',execution:'ACTION: EMAIL_PARSED. State: EXECUTED.',privacy:'Actor identity is observable. Agent internal chain-of-thought: PROTECTED — NOT EXPOSED.'}
+ }
+},
+{id:'V-ACTIVITY-08',name:'Agent Activity',connState:'LIVE',stale:false,
+ notes:'Full agent task visible: objective, stages, cost, model, duration, outcome.',
+ stream:()=>[
+  evCard('AGENT','COMPLETED','Task T-2847: Analyse Q3 financial performance — COMPLETED','apex-agent-fin',ts(47),'info','<span>Stages: 4/4</span><span>Cost: $0.023</span><span>47s</span>'),
+ ],
+ detail:{
+  l0:'An agent completed a financial analysis task.',
+  l1:{when:tsFull(47),where:'Agent pipeline',by:'apex-agent-fin'},
+  l2:{task_id:'T-2847',objective:'Analyse Q3 financial performance',state:'COMPLETED',duration:'47s',stages:'4/4 (planning, research, synthesis, output)',model:'claude-sonnet-4-6',cost_usd:'$0.023',success:true,source_table:'apex_agent_runs'},
+  l3:{evidence:{commit_hash:'NOT RECORDED — no code change',files_changed:'output/Q3-analysis.md',source:'apex_timeline'},provenance:{origin:'lib/auto-pipeline.js',pipeline_trigger:'master-task',trace_id:'NOT AVAILABLE'},related:['Notification N-0092','Task T-2847'],correlation:'NOT AVAILABLE — no correlation_id in production'},
+  l4:{constitutional:'Constitutional gate evaluated before task start. Gate: ALLOW (A1+A3+A4).',governance:'FINANCE domain — standard governance pass.',execution:'EXECUTED — task completed successfully. Not merely proposed or approved.',privacy:'Chain-of-thought during synthesis: PROTECTED — NOT EXPOSED. Observable: task objective, duration, cost, outcome only.'}
+ }
+},
+{id:'V-ACTIVITY-09',name:'Tool Activity',connState:'LIVE',stale:false,
+ notes:'Tool execution event: web_search. Shows tool, state, timestamp, result status, parent task. No secrets exposed.',
+ stream:()=>[
+  evCard('TOOL','COMPLETED','Tool web_search — "Q3 financial trends" — 5 results returned','apex-agent-fin',ts(12),'info','<span>Parent: T-2847</span><span>1.2s</span>'),
+ ],
+ detail:{
+  l0:'A tool executed a web search.',
+  l1:{when:tsFull(12),where:'Agent tool executor',by:'apex-agent-fin'},
+  l2:{tool:'web_search',invocation_state:'COMPLETED',result_status:'SUCCESS',duration:'1.2s',results_returned:5,parent_task_id:'T-2847',query_summary:'Q3 financial trends (query not stored in full — privacy)'},
+  l3:{evidence:{source:'agent_actions table',action_type:'web_search',result_summary:'5 URLs returned (full results not exposed here — observability surface only)'},provenance:{origin:'apex-agent-fin → tool executor',captured_at:tsFull(12),trace_id:'NOT AVAILABLE'},related:['Task T-2847','Agent apex-agent-fin'],correlation:'NOT AVAILABLE'},
+  l4:{constitutional:'Tool execution within approved scope. No constitutional block.',governance:'KNOWLEDGE domain. Standard governance.',execution:'EXECUTED. Tool result consumed by parent task.',privacy:'⊘ Full search results not exposed. Tool query logged at summary level only. No credentials or API keys shown.'}
+ }
+},
+{id:'V-ACTIVITY-10',name:'Decision Activity',connState:'LIVE',stale:false,
+ notes:'Intelligence decision chain: OBSERVATION → INTERPRETATION → RECOMMENDATION → PROPOSAL → DECISION → ACTION. State: AWAITING_APPROVAL.',
+ stream:()=>[
+  evCard('DECISION','AWAITING_APPROVAL','Decision D-442: Reduce equity allocation by 8% — AWAITING APPROVAL','apex-agent-fin',ts(300),'warning','<span>Domain: FINANCE</span>'),
+ ],
+ detail:{
+  l0:'A financial decision is awaiting user approval.',
+  l1:{when:tsFull(300),where:'Decision surface / FINANCE domain',by:'apex-agent-fin'},
+  l2:{decision_id:'D-442',chain:'OBSERVATION → INTERPRETATION → RECOMMENDATION → PROPOSAL → DECISION → ACTION',current_state:'AWAITING_APPROVAL',action_proposed:'Reduce equity allocation by 8%',domain:'FINANCE',risk:'MEDIUM',observation:'Market data shows 15% sector shift',interpretation:'Significant trend requiring portfolio adjustment'},
+  l3:{evidence:{observation_source:'market-data-feed',confidence:0.87,evidence_id:'EVD-0041'},provenance:{origin:'apex-agent-fin intelligence module',captured_at:tsFull(300)},related:['Task T-2847','Approval request APR-091','Notification N-0093'],correlation:'D-442 → APR-091 (explicit linkage)'},
+  l4:{constitutional:'Decision cannot execute without A4-GOVERNANCE approval. Constitutional gate: AWAITING_APPROVAL.',governance:'FINANCE domain — high-value threshold exceeded. User-explicit-approval required.',execution:'NOT EXECUTED — decision is PROPOSED. Approval is not execution.',privacy:'Recommendation rationale: observable at L4. Internal model reasoning chain: PROTECTED — NOT EXPOSED.'}
+ }
+},
+{id:'V-ACTIVITY-11',name:'Approval Activity',connState:'LIVE',stale:false,
+ notes:'Approval request awaiting user decision. Shows approval state, requestor, authority required. Buttons are prototype-only.',
+ stream:()=>[
+  evCard('APPROVAL','AWAITING_APPROVAL','APR-091: Send email to client@example.com — AWAITING YOUR APPROVAL','apex-agent-comm',ts(120),'warning','<span>2 min ago</span>'),
+ ],
+ detail:{
+  l0:'An action requires your approval before it can execute.',
+  l1:{when:tsFull(120),where:'Approval surface',by:'apex-agent-comm-01 (requesting)'},
+  l2:{approval_id:'APR-091',action:'Send email to client@example.com',action_type:'EMAIL_SEND',state:'AWAITING_APPROVAL',requested_by:'apex-agent-comm-01',authority_required:'user-explicit-approval',created:tsFull(120),expires:tsFull(-86280),note:'⚠ PROTOTYPE ONLY — buttons below do not execute actions.'},
+  l3:{evidence:{trigger:'Decision D-442 → email communication required',governance_requirement:'COMMUNICATION domain — external contact requires user approval'},provenance:{origin:'apex-agent-comm-01 communication module',approval_record:'apex_notifications type=permission'},related:['Decision D-442','Notification N-0093'],correlation:'APR-091 → D-442 (explicit)'},
+  l4:{constitutional:'A4-GOVERNANCE requires user-explicit-approval for external communication. Constitutional gate: AWAITING_APPROVAL. Action will NOT execute until approved.',governance:'COMMUNICATION domain — external contact policy applied.',execution:'NOT EXECUTED. Approval is not execution. PROPOSED → APPROVAL_REQUIRED → [awaiting]',privacy:'Email content draft not shown at L4 — contact details observable; message body: PROTECTED.'}
+ }
+},
+{id:'V-ACTIVITY-12',name:'Action Activity',connState:'LIVE',stale:false,
+ notes:'Action CALENDAR_EVENT_CREATE showing full lifecycle: PROPOSED → APPROVED → EXECUTED. Result contains event_id.',
+ stream:()=>[
+  evCard('ACTION','EXECUTED','Action ACT-188: CALENDAR_EVENT_CREATE — "Strategy Review" created','apex-agent-cal',ts(30),'info','<span>Approved by: user</span>'),
+ ],
+ detail:{
+  l0:'A calendar event was created.',
+  l1:{when:tsFull(30),where:'Calendar integration',by:'apex-agent-cal (approved by user)'},
+  l2:{action_id:'ACT-188',action_type:'CALENDAR_EVENT_CREATE',state:'EXECUTED',result_event_id:'gcal-7821',result_title:'Strategy Review',executed_at:tsFull(30),approved_by:'user',approval_id:'APR-088'},
+  l3:{evidence:{result:{event_id:'gcal-7821',title:'Strategy Review',calendar:'primary'},source:'agent_actions table'},provenance:{origin:'apex-agent-cal',approved_via:'APR-088',executed_after_approval:true},related:['Approval APR-088','Decision D-438','Notification N-0090'],correlation:'ACT-188 → APR-088 → D-438 (explicit)'},
+  l4:{constitutional:'Constitutional gate: ALLOW (A1+A3). Calendar write within approved scope.',governance:'OPERATIONS domain. Standard governance. No escalation.',execution:'EXECUTED — calendar event exists. State: EXECUTED (not merely APPROVED or PROPOSED).',privacy:'No credentials or OAuth tokens exposed. Result observable: event_id and title only.'}
+ }
+},
+{id:'V-ACTIVITY-13',name:'Execution Activity',connState:'LIVE',stale:false,
+ notes:'Full execution state chain: PROPOSED → APPROVAL_REQUIRED → APPROVED → EXECUTING → EXECUTED with timestamps.',
+ stream:()=>[
+  evCard('ACTION','EXECUTED','Action ACT-200: send_slack_message — #apex-alerts — EXECUTED','apex-agent-comm',ts(8),'info','<span>Full chain visible</span>'),
+ ],
+ detail:{
+  l0:'A Slack message was sent after approval.',
+  l1:{when:tsFull(8),where:'Slack integration',by:'apex-agent-comm (user approved)'},
+  l2:{action_id:'ACT-200',tool:'send_slack_message',channel:'#apex-alerts',execution_chain:'PROPOSED → APPROVAL_REQUIRED → APPROVED → EXECUTING → EXECUTED',timestamps:{proposed:tsFull(380),approval_required:tsFull(380),approved:tsFull(30),executing:tsFull(9),executed:tsFull(8)}},
+  l3:{evidence:{state_proof:'Each state transition recorded in agent_actions',final_state:'EXECUTED'},provenance:{origin:'apex-agent-comm',approval_id:'APR-095'},related:['Approval APR-095','Notification N-0094'],correlation:'ACT-200 → APR-095 (explicit)'},
+  l4:{constitutional:'A4-GOVERNANCE: external communication requires approval. Gate: APPROVED → EXECUTING → EXECUTED.',governance:'COMMUNICATION domain. External message policy satisfied.',execution:'EXECUTED. State progression is evidence of execution — not merely an event label.',privacy:'Message content observable at L4. No tokens or API keys exposed.'}
+ }
+},
+{id:'V-ACTIVITY-14',name:'Constitutional Activity',connState:'LIVE',stale:false,
+ notes:'Constitutional check: A3-OWNERSHIP gate evaluated. ALLOW. 5-gate chain shown.',
+ stream:()=>[
+  evCard('CONSTITUTIONAL','COMPLETED','Constitutional check — A3-OWNERSHIP — action: file_write /vault/memory.md — ALLOW','system',ts(20),'info',''),
+ ],
+ detail:{
+  l0:'A constitutional check determined an action is allowed.',
+  l1:{when:tsFull(20),where:'Constitutional gate',by:'system (constitutional engine)'},
+  l2:{rule:'A3-OWNERSHIP',determination:'ALLOW',authority_state:'OWNER_CONFIRMED',governance_state:'ACTIVE',action_evaluated:'file_write /vault/memory.md',blocked:false,gates_checked:'5/5'},
+  l3:{evidence:{gate_chain:'A1-IDENTITY → A2-CONSENT → A3-OWNERSHIP → A4-GOVERNANCE → A5-SAFETY',all_gates:'PASS',constitutional_record:'CRID-0041'},provenance:{origin:'constitutional engine',evaluated_at:tsFull(20),rule_version:'v1.0'},related:['Action ACT-190','Constitutional Record CRID-0041'],correlation:'CRID-0041 (explicit constitutional record ID)'},
+  l4:{constitutional:'Full 5-gate evaluation: A1 PASS, A2 PASS, A3 PASS (owner confirmed), A4 PASS (governance active), A5 PASS (safety). Source of truth: EXECUTIVE_CONSTITUTION.md. This event describes the evaluation — the constitutional source of truth is authoritative.',governance:'MEMORY domain. Write within approved scope.',execution:'Constitutional check is observability — it does not itself authorise. Authority derives from the constitutional system, not from this activity record.',privacy:'Constitutional reasoning summary observable. Full evaluation internals: in constitutional record CRID-0041, not exposed here.'}
+ }
+},
+{id:'V-ACTIVITY-15',name:'Governance Activity',connState:'LIVE',stale:false,
+ notes:'Governance evaluation: FINANCE domain, high-value transaction blocked. Escalation required.',
+ stream:()=>[
+  evCard('GOVERNANCE','BLOCKED','Governance block — FINANCE — action: transfer $5000 — BLOCKED (exceeds limit)','system',ts(15),'warning','<span>Escalation: REQUIRED</span>'),
+ ],
+ detail:{
+  l0:'A financial action was blocked by governance.',
+  l1:{when:tsFull(15),where:'Governance engine / FINANCE domain',by:'system (governance)'},
+  l2:{domain:'FINANCE',restriction:'high-value-transaction-limit',threshold:'$1,000',action:'transfer $5000',blocked:true,escalation:'REQUIRED',approval_requirement:'user-explicit-approval + finance-authority'},
+  l3:{evidence:{governance_rule:'FINANCE-POLICY-002',governance_record:'GVRID-0081'},provenance:{origin:'governance engine',evaluated_at:tsFull(15)},related:['Decision D-445','Constitutional Record CRID-0042','Notification N-0097'],correlation:'GVRID-0081 → CRID-0042 (explicit)'},
+  l4:{constitutional:'A4-GOVERNANCE gate: BLOCKED. Action exceeds approved financial scope.',governance:'Source of truth: APEX_GOVERNANCE_MODEL.md. Governance evaluation record: GVRID-0081. Activity record points to governance record — does not replace it.',execution:'NOT EXECUTED. BLOCKED state is not execution failure — it is a governance restriction.',privacy:'Transaction details at L4 only. No account credentials shown.'}
+ }
+},
+{id:'V-ACTIVITY-16',name:'Knowledge Activity',connState:'LIVE',stale:false,
+ notes:'Knowledge event: subject discovered, evidence added, gap resolved. Does not reopen Knowledge-Gap programme.',
+ stream:()=>[
+  evCard('KNOWLEDGE','COMPLETED','Knowledge updated — ANTHR-Q3-2026 validated — gap KG-ANTHR-Q3 resolved','apex-agent-res',ts(60),'info','<span>Evidence: 3 items</span>'),
+ ],
+ detail:{
+  l0:'A knowledge subject was validated and a knowledge gap was resolved.',
+  l1:{when:tsFull(60),where:'Knowledge pipeline',by:'apex-agent-res'},
+  l2:{event_type:'KNOWLEDGE_UPDATED',subject:'Anthropic Q3 2026 results',evidence_added:3,validation:'PERFORMED',knowledge_status:'ACTIVE',gap_resolved:'KG-ANTHR-Q3 (closed — Knowledge-Gap programme complete, this gap was opened post-programme)'},
+  l3:{evidence:{evidence_ids:['EVD-0051','EVD-0052','EVD-0053'],sources:'SEC filing, earnings call transcript, press release'},provenance:{origin:'apex-agent-res research pipeline',captured_at:tsFull(60)},related:['Knowledge Record KR-0041','Knowledge Gap KG-ANTHR-Q3'],correlation:'NOT AVAILABLE'},
+  l4:{constitutional:'Knowledge write within A3-OWNERSHIP scope. ALLOW.',governance:'KNOWLEDGE domain. Standard governance.',execution:'Knowledge record updated. Activity points to knowledge record — does not replace it.',privacy:'Knowledge content observable at L4. Source documents not exposed in full — summary only.'}
+ }
+},
+{id:'V-ACTIVITY-17',name:'Memory Activity',connState:'LIVE',stale:false,
+ notes:'Memory created event: new preference stored. Shows provenance, confidence, freshness. Memory activity ≠ memory authority.',
+ stream:()=>[
+  evCard('MEMORY','COMPLETED','Memory created — preference: "morning briefings at 07:30"','system',ts(45),'info','<span>Confidence: 0.94</span>'),
+ ],
+ detail:{
+  l0:'A new memory preference was recorded.',
+  l1:{when:tsFull(45),where:'Memory pipeline',by:'system (memory engine)'},
+  l2:{event_type:'MEMORY_CREATED',memory_id:'mem-8821',content_summary:'User prefers morning briefings at 07:30',confidence:0.94,freshness:'CURRENT',provenance_source:'voice-session-S-0447'},
+  l3:{evidence:{memory_record:'mem-8821',stored_in:'memory table (Supabase)',content_hash:'sha256:e3b0c44…'},provenance:{origin:'voice-session-S-0447',captured_at:tsFull(45),processed_by:'intent-classifier-v2',confidence:0.94},related:['Voice session S-0447','Memory Record mem-8821'],correlation:'NOT AVAILABLE'},
+  l4:{constitutional:'Memory write: A3-OWNERSHIP scope. ALLOW.',governance:'MEMORY domain. Standard governance.',execution:'Memory record created in memory table. Activity record describes creation — memory record is authoritative.',privacy:'Memory content summarised. Full memory record: in memory table (authoritative). Activity does not confer memory authority.'}
+ }
+},
+{id:'V-ACTIVITY-18',name:'Voice Activity',connState:'LIVE',stale:false,
+ notes:'Voice session state transitions. THINKING shown as state only — no transcript. Privacy boundary visible.',
+ stream:()=>[
+  evCard('VOICE','COMPLETED','Voice session S-0512 completed — briefing delivered','user',ts(8),'info','<span>Duration: 8.2s</span>'),
+ ],
+ detail:{
+  l0:'A voice session completed.',
+  l1:{when:tsFull(8),where:'/ws/gemini-live',by:'user'},
+  l2:{session_id:'S-0512',states_observed:'ACTIVATING → LISTENING → UNDERSTANDING → THINKING → SPEAKING → COMPLETED',duration:'8.2s',intent:'morning briefing request',outcome:'briefing delivered',note:'THINKING state is a lifecycle state — not a transcript of private reasoning.'},
+  l3:{evidence:{state_events:6,source:'event-bus VOICE_STARTED + INTENT_CLASSIFIED + SESSION_COMPLETED'},provenance:{origin:'routes/gemini-live.js',session:'/ws/gemini-live'},related:['Memory created mem-8821','Notification N-0088'],correlation:'NOT AVAILABLE — session_id is scoping only, not correlation_id'},
+  l4:{constitutional:'Voice pipeline: A1-IDENTITY confirmed. A3-OWNERSHIP: user session. ALLOW.',governance:'VOICE domain. Standard governance.',execution:'EXECUTED — voice session completed.',privacy:'⊘ THINKING state visible. Internal reasoning transcript: PROTECTED — NOT EXPOSED. This is a hard privacy boundary. Observable: state transitions only.'}
+ }
+},
+{id:'V-ACTIVITY-19',name:'Communication Activity',connState:'LIVE',stale:false,
+ notes:'Proactive communication lifecycle: GENERATED → EVALUATED → QUEUED → PRESENTED → ACKNOWLEDGED. No internal reasoning.',
+ stream:()=>[
+  evCard('COMMUNICATION','COMPLETED','Proactive message "Q3 briefing ready" — ACKNOWLEDGED','system',ts(180),'info','<span>Lifecycle: complete</span>'),
+ ],
+ detail:{
+  l0:'A proactive communication was acknowledged.',
+  l1:{when:tsFull(180),where:'Dashboard notification channel',by:'system → user'},
+  l2:{message:'Q3 briefing ready',channel:'dashboard-notification',lifecycle:'GENERATED → EVALUATED(urgency:HIGH) → QUEUED → PRESENTED → ACKNOWLEDGED',urgency:'HIGH',suppressed:false,presented_at:tsFull(200),acknowledged_at:tsFull(180)},
+  l3:{evidence:{communication_record:'COMM-0031',urgency_evaluation:'HIGH — time-sensitive financial data'},provenance:{origin:'proactive communication engine (UX-09)',trigger:'apex_timeline completion event'},related:['Task T-2847','Notification N-0095'],correlation:'COMM-0031 → T-2847 (explicit trigger)'},
+  l4:{constitutional:'Communication within A3-OWNERSHIP. ALLOW.',governance:'COMMUNICATION domain. Internal notification — no approval required.',execution:'Communication DELIVERED and ACKNOWLEDGED. Not merely generated.',privacy:'⊘ Urgency evaluation rationale: observable at L4. Internal suppression reasoning: NOT EXPOSED.'}
+ }
+},
+{id:'V-ACTIVITY-20',name:'Notification Activity',connState:'LIVE',stale:false,
+ notes:'User-facing notification from pipeline completion. Linked to apex_agent_runs entry.',
+ stream:()=>[
+  evCard('NOTIFICATION','COMPLETED','Notification N-0092: "Pipeline T-2822 complete" — delivered, unread','system',ts(90),'info','<span>Unread</span>'),
+ ],
+ detail:{
+  l0:'A pipeline completion notification was delivered.',
+  l1:{when:tsFull(90),where:'Notification channel',by:'system'},
+  l2:{notification_id:'N-0092',type:'SYSTEM_ALERT',title:'Pipeline T-2822 complete',message:'Financial summary generated successfully.',read:false,created_at:tsFull(90),dedup_key:'SYSTEM_ALERT:apex_timeline:T-2822:Pipeline T-2822 complete',dedup_window:'60s'},
+  l3:{evidence:{source:'notifications table',event_key:'SYSTEM_ALERT:apex_timeline:T-2822:Pipeline T-2822 complete'},provenance:{origin:'lib/supabase-helpers.js pgCreateNotification()',trigger:'auto-pipeline completion'},related:['Task T-2822','Timeline entry TL-2822'],correlation:'NOT AVAILABLE'},
+  l4:{constitutional:'Notification creation: A3-OWNERSHIP scope. ALLOW.',governance:'NOTIFICATION domain. Internal alert — no approval required.',execution:'Notification DELIVERED. Activity records delivery — does not confer authority.',privacy:'No sensitive content in notification body. Contact details not included.'}
+ }
+},
+{id:'V-ACTIVITY-21',name:'Error Activity',connState:'LIVE',stale:false,
+ notes:'Pipeline failure event. Error visible. Recovery state: RETRYING. Failure not hidden.',
+ stream:()=>[
+  evCard('ERROR','FAILED','Task T-2901 failed — stage: research — "OpenAI rate limit exceeded" — RETRYING','apex-agent-res',ts(18),'error','<span>Duration: 12s</span>'),
+ ],
+ detail:{
+  l0:'A task failed due to a rate limit error.',
+  l1:{when:tsFull(18),where:'Agent pipeline — research stage',by:'apex-agent-res'},
+  l2:{task_id:'T-2901',stage:'research (stage 2/4)',error:'OpenAI rate limit exceeded',duration:'12s',recovery:'RETRYING',retry_count:1,severity:'ERROR',source_table:'apex_timeline (success:false)'},
+  l3:{evidence:{error_log:'apex_timeline.error field',event_type:'pipeline.failed',consumer:'pipeline-failure-alert → Slack'},provenance:{origin:'lib/auto-pipeline.js _appendTimeline() failure path',captured_at:tsFull(18)},related:['Notification N-0096 (Slack)','Retry Task T-2901-R1'],correlation:'NOT AVAILABLE'},
+  l4:{constitutional:'Task failure does not alter constitutional state.',governance:'Error logged. Governance not implicated.',execution:'FAILED — not completed. Retry is a new execution instance.',privacy:'Error message observable. Stack trace: NOT EXPOSED to this surface.'}
+ }
+},
+{id:'V-ACTIVITY-22',name:'CREATED State',connState:'LIVE',stale:false,
+ notes:'Lifecycle state: CREATED. Event just inserted. No processing yet.',
+ stream:()=>[evCard('AGENT','CREATED','Task T-2855: Weekly universe briefing — CREATED','system',ts(1),'info','<span>Just now</span>')],
+ detail:{l0:'A task was created.',l1:{when:tsFull(1),where:'Task queue',by:'system'},l2:{state:'CREATED',task_id:'T-2855',objective:'Weekly universe briefing',queue_position:'pending'},l3:{evidence:{source:'apex_tasks table',state:'pending'},provenance:{origin:'master task system'}},l4:{note:'CREATED ≠ STARTED. Task exists but has not begun executing.'}}
+},
+{id:'V-ACTIVITY-23',name:'QUEUED State',connState:'LIVE',stale:false,
+ notes:'Lifecycle state: QUEUED. In agent queue. Position 3. ETA ~45s.',
+ stream:()=>[evCard('AGENT','QUEUED','Task T-2855: Weekly universe briefing — QUEUED (position 3)','apex-agent-brief',ts(3),'info','<span>ETA: ~45s</span>')],
+ detail:{l0:'A task is queued for processing.',l1:{when:tsFull(3),where:'Agent queue (lib/agent-queue.js)',by:'apex-agent-brief'},l2:{state:'QUEUED',task_id:'T-2855',queue_position:3,workers_available:1,eta_seconds:45},l3:{evidence:{source:'apex_notifications type=master_task',queue_depth:3}},l4:{note:'QUEUED ≠ EXECUTING. Task is waiting for a worker.'}}
+},
+{id:'V-ACTIVITY-24',name:'STARTED State',connState:'LIVE',stale:false,
+ notes:'Lifecycle state: STARTED. Pipeline initialised. Stage 1 beginning.',
+ stream:()=>[evCard('AGENT','STARTED','Task T-2855: Weekly universe briefing — STARTED','apex-agent-brief',ts(5),'info','<span>Stage: 1/4</span>')],
+ detail:{l0:'A task has started.',l1:{when:tsFull(5),where:'Agent pipeline',by:'apex-agent-brief'},l2:{state:'STARTED',task_id:'T-2855',stage:'1/4',start_time:tsFull(5)},l3:{evidence:{source:'event-bus AGENT_STARTED',emitted_by:'lib/auto-pipeline.js:93'}},l4:{note:'STARTED ≠ COMPLETED. Task is initialised — first stage beginning.'}}
+},
+{id:'V-ACTIVITY-25',name:'IN PROGRESS State',connState:'LIVE',stale:false,
+ notes:'Lifecycle state: IN_PROGRESS. Stage 2/4 active. 50% progress. 23s elapsed.',
+ stream:()=>[evCard('AGENT','IN_PROGRESS','Task T-2855: Synthesising research — stage 2/4 active','apex-agent-brief',ts(23),'info','<span>50% — 23s elapsed</span>')],
+ detail:{l0:'A task is currently executing.',l1:{when:tsFull(23),where:'Agent pipeline',by:'apex-agent-brief'},l2:{state:'IN_PROGRESS',task_id:'T-2855',stage:'2/4',current_step:'Synthesising research',progress:'~50%',elapsed:'23s'},l3:{evidence:{source:'event-bus IN_PROGRESS (emitted by lib/auto-pipeline.js)',ring_position:190}},l4:{note:'IN_PROGRESS ≠ COMPLETED. Task is executing. Do not read execution result here.'}}
+},
+{id:'V-ACTIVITY-26',name:'WAITING State',connState:'LIVE',stale:false,
+ notes:'Lifecycle state: WAITING. Blocked on external dependency: Notion API response.',
+ stream:()=>[evCard('AGENT','WAITING','Task T-2856: Notion sync — WAITING on Notion API response (8s)','apex-agent-notion',ts(8),'warning','<span>No timeout defined</span>')],
+ detail:{l0:'A task is waiting for an external dependency.',l1:{when:tsFull(8),where:'Notion integration',by:'apex-agent-notion'},l2:{state:'WAITING',task_id:'T-2856',waiting_for:'Notion API response',wait_duration:'8s',timeout:'NOT DEFINED'},l3:{evidence:{source:'apex_agent_stages (stage stalled)'}},l4:{note:'WAITING ≠ FAILED. Task will resume when dependency resolves. No action taken.'}}
+},
+{id:'V-ACTIVITY-27',name:'AWAITING APPROVAL State',connState:'LIVE',stale:false,
+ notes:'Lifecycle state: AWAITING_APPROVAL. User action required. Action: delete 47 processed emails.',
+ stream:()=>[evCard('APPROVAL','AWAITING_APPROVAL','Approval required: Delete 47 processed emails — AWAITING YOUR DECISION (2 min)','apex-agent-email',ts(120),'warning','<span>Risk: MEDIUM</span>')],
+ detail:{l0:'An action requires your approval.',l1:{when:tsFull(120),where:'Approval gate',by:'apex-agent-email-01'},l2:{state:'AWAITING_APPROVAL',action:'Delete 47 processed emails',risk:'MEDIUM',requested_at:tsFull(120),expires:tsFull(-86280)},l3:{evidence:{source:'apex_notifications type=permission'}},l4:{constitutional:'A4-GOVERNANCE: destructive action requires user-explicit-approval. Action BLOCKED until approved.',execution:'NOT EXECUTED. AWAITING_APPROVAL is not execution.',privacy:'Email subject lines listed at L4 only — content not shown.'}}
+},
+{id:'V-ACTIVITY-28',name:'BLOCKED State',connState:'LIVE',stale:false,
+ notes:'Lifecycle state: BLOCKED. Constitutional gate DENIED. Cannot proceed without authority change.',
+ stream:()=>[evCard('CONSTITUTIONAL','BLOCKED','Task T-2860 BLOCKED — Constitutional gate A4-GOVERNANCE DENIED — action exceeds approved scope','system',ts(5),'error','<span>Cannot proceed</span>')],
+ detail:{l0:'A task is blocked by the constitutional gate.',l1:{when:tsFull(5),where:'Constitutional gate',by:'system (constitutional engine)'},l2:{state:'BLOCKED',task_id:'T-2860',rule:'A4-GOVERNANCE',reason:'Action exceeds approved scope',gate_result:'DENY',recovery:'Authority change required'},l3:{evidence:{constitutional_record:'CRID-0045',gate:'A4-GOVERNANCE DENY'}},l4:{constitutional:'A4 gate: DENY. Task cannot proceed. Constitutional engine is authoritative — not this activity record.',execution:'NOT EXECUTED. BLOCKED state prevents execution.',privacy:'Governance scope details at L4 only.'}}
+},
+{id:'V-ACTIVITY-29',name:'COMPLETED State',connState:'LIVE',stale:false,
+ notes:'Lifecycle state: COMPLETED. Task finished successfully. 4/4 stages. 3 files modified.',
+ stream:()=>[evCard('AGENT','COMPLETED','Task T-2822 COMPLETED — financial summary — 4/4 stages — 1m 34s','apex-agent-fin',ts(94),'info','<span>3 files modified</span>')],
+ detail:{l0:'A task completed successfully.',l1:{when:tsFull(94),where:'Agent pipeline',by:'apex-agent-fin'},l2:{state:'COMPLETED',task_id:'T-2822',stages:'4/4',duration:'1m 34s',files_changed:3,success:true,source:'apex_timeline'},l3:{evidence:{commit_hash:'a3f7e29',files_changed:['output/summary.md','output/Q3.json','vault/briefings/Q3.md']}},l4:{execution:'COMPLETED = task finished and result persisted. Not merely started or proposed.'}}
+},
+{id:'V-ACTIVITY-30',name:'FAILED State',connState:'LIVE',stale:false,
+ notes:'Lifecycle state: FAILED. Task T-2901 failed at stage 2. No retry scheduled.',
+ stream:()=>[evCard('ERROR','FAILED','Task T-2901 FAILED — stage 2 — "Context window exceeded" — no retry','apex-agent-res',ts(18),'error','<span>18s elapsed</span>')],
+ detail:{l0:'A task failed.',l1:{when:tsFull(18),where:'Agent pipeline — research stage',by:'apex-agent-res'},l2:{state:'FAILED',task_id:'T-2901',stage:'2/4',error:'Context window exceeded',duration:'18s',retry:'NOT SCHEDULED',source:'apex_timeline (success:false)'},l3:{evidence:{error_field:'Context window exceeded',consumer:'pipeline-failure-alert'}},l4:{execution:'FAILED ≠ COMPLETED. No output produced. Error is visible — not hidden.',privacy:'Full error trace: NOT EXPOSED. Error message: observable.'}}
+},
+{id:'V-ACTIVITY-31',name:'CANCELLED State',connState:'LIVE',stale:false,
+ notes:'Lifecycle state: CANCELLED. User interrupted at stage 1. Clean shutdown.',
+ stream:()=>[evCard('AGENT','CANCELLED','Task T-2910 CANCELLED — user interrupted — stage 1','user',ts(4),'warning','<span>Clean shutdown</span>')],
+ detail:{l0:'A task was cancelled by the user.',l1:{when:tsFull(4),where:'Agent pipeline — stage 1',by:'user (interrupt)'},l2:{state:'CANCELLED',task_id:'T-2910',cancelled_at:'stage 1',reason:'User interrupted',event_type:'USER_INTERRUPTED'},l3:{evidence:{source:'event-bus USER_INTERRUPTED'}},l4:{execution:'CANCELLED ≠ FAILED. Clean shutdown — no partial output committed.'}}
+},
+{id:'V-ACTIVITY-32',name:'DEFERRED State',connState:'LIVE',stale:false,
+ notes:'Lifecycle state: DEFERRED. Task deferred from 09:00 to 14:00. Will resume automatically.',
+ stream:()=>[evCard('AGENT','DEFERRED','Task T-2915 DEFERRED — dependency not ready — resumes 14:00','system',ts(1800),'info','<span>Original: 09:00</span>')],
+ detail:{l0:'A task was deferred and will resume automatically.',l1:{when:tsFull(1800),where:'Task scheduler',by:'system'},l2:{state:'DEFERRED',task_id:'T-2915',original_time:'09:00',deferred_to:'14:00',reason:'Dependency not ready',auto_resume:true},l3:{evidence:{source:'apex_notifications (deferred flag)'}},l4:{execution:'DEFERRED ≠ CANCELLED. Task will execute at 14:00 if dependency resolves.'}}
+},
+{id:'V-ACTIVITY-33',name:'EXPIRED State',connState:'LIVE',stale:false,
+ notes:'Lifecycle state: EXPIRED. Approval window expired. Action not executed. No auto-retry.',
+ stream:()=>[evCard('APPROVAL','EXPIRED','Approval APR-075 EXPIRED — 48h elapsed — action NOT EXECUTED','system',ts(172800),'warning','<span>No auto-retry</span>')],
+ detail:{l0:'An approval request expired without a decision.',l1:{when:tsFull(172800),where:'Approval gate',by:'system (expiry)'},l2:{state:'EXPIRED',approval_id:'APR-075',approval_window:'24h',actual_elapsed:'48h',action:'NOT EXECUTED',retry:'NOT SCHEDULED'},l3:{evidence:{source:'apex_notifications (read=true, expired)'}},l4:{execution:'NOT EXECUTED. Expired approval does not trigger execution.',constitutional:'A4-GOVERNANCE: no approval = no execution. This is correct behaviour.'}}
+},
+{id:'V-ACTIVITY-34',name:'Evidence',connState:'LIVE',stale:false,
+ notes:'L3 disclosure showing full evidence block: source document, extraction method, confidence, chunk_id.',
+ stream:()=>[evCard('KNOWLEDGE','COMPLETED','Evidence block: Q3-Financial-Report.pdf — page 7 — 91% confidence','apex-agent-res',ts(60),'info','')],
+ detail:{
+  l0:'A knowledge event with detailed evidence.',
+  l1:{when:tsFull(60),where:'Knowledge pipeline',by:'apex-agent-res'},
+  l2:{event_type:'KNOWLEDGE_DISCOVERED',subject:'Q3 financial results',evidence_count:1},
+  l3:{evidence:{source_doc:'Q3-Financial-Report.pdf',extracted_at:tsFull(65),page:7,confidence:0.91,method:'RAG retrieval',chunk_id:'doc-7821-p7',embedding_model:'text-embedding-3-small'},provenance:{origin:'apex-agent-res',knowledge_pipeline:'v2'},related:['Knowledge Record KR-0041']},
+  l4:{note:'Evidence is observable at L3+. Full document: not exposed — summary and chunk reference only.'}
+ }
+},
+{id:'V-ACTIVITY-35',name:'Provenance',connState:'LIVE',stale:false,
+ notes:'Full provenance chain shown: origin, captured_at, processed_by, confidence, trace_id.',
+ stream:()=>[evCard('AGENT','COMPLETED','Provenance chain — voice-session-512 → intent-classifier → pipeline','user',ts(90),'info','')],
+ detail:{
+  l0:'An event with full provenance recorded.',
+  l1:{when:tsFull(90),where:'Voice pipeline → agent pipeline',by:'user → apex-agent-01'},
+  l2:{event_type:'AGENT_COMPLETED',task_id:'T-2848',origin:'voice-session-S-0512'},
+  l3:{evidence:{},provenance:{origin:'voice-session-S-0512',captured_at:tsFull(92),processed_by:'intent-classifier-v2',confidence:0.89,trace_id:'tr-abc123',pipeline_step:'INTENT_CLASSIFIED → AGENT_STARTED → AGENT_COMPLETED'},related:['Voice session S-0512','Task T-2848'],correlation:'NOT AVAILABLE — no correlation_id in production event bus'},
+  l4:{note:'Provenance is observable. Trace_id is from intent classifier. End-to-end trace not available in production — production gap documented.'}
+ }
+},
+{id:'V-ACTIVITY-36',name:'Correlation',connState:'LIVE',stale:false,
+ notes:'Correlation chain: explicit linkage across event → task → agent → tool → decision → approval → action.',
+ stream:()=>[evCard('ACTION','EXECUTED','Correlation chain: E-001 → T-2847 → AGT-01 → TOOL → D-442 → APR-091 → ACT-188','system',ts(8),'info','')],
+ detail:{
+  l0:'An action with an explicit correlation chain.',
+  l1:{when:tsFull(8),where:'Full pipeline',by:'apex-agent-fin'},
+  l2:{correlation_note:'Explicit linkage from decision through approval to action. Correlation IDs exist only where explicitly stored.'},
+  l3:{evidence:{},provenance:{},related:['Event E-001','Task T-2847','Decision D-442','Approval APR-091','Action ACT-188'],correlation:'D-442 → APR-091 → ACT-188 (explicit field linkage in agent_actions/notifications tables)'},
+  l4:{note:'CAUSATION: not inferred from chronology. Only explicit field linkage (decision_id, approval_id, action_id) constitutes correlation. Adjacent events in time are NOT causally linked by this system.',constitutional:'Correlation is observable. It does not confer authority.'}
+ }
+},
+{id:'V-ACTIVITY-37',name:'Related Records',connState:'LIVE',stale:false,
+ notes:'Event with 4 related records: parent task, triggering decision, constitutional check, notification generated.',
+ stream:()=>[evCard('ACTION','EXECUTED','Action ACT-188 — 4 related records linked','apex-agent-fin',ts(30),'info','<span>4 related records</span>')],
+ detail:{
+  l0:'An action with multiple related records.',
+  l1:{when:tsFull(30),where:'Agent pipeline',by:'apex-agent-fin'},
+  l2:{action_id:'ACT-188',related_count:4},
+  l3:{evidence:{},provenance:{},related:['Task T-2847 (parent task)','Decision D-442 (triggering decision)','Constitutional Check CRID-0041 (gate evaluation)','Notification N-0095 (generated on completion)'],correlation:'ACT-188 links to D-442 and APR-091 via explicit foreign keys.'},
+  l4:{note:'Navigation between records is observability — not authority. Each record type has its own authoritative source.'}
+ }
+},
+{id:'V-ACTIVITY-38',name:'L0 Disclosure',connState:'LIVE',stale:false,
+ notes:'Disclosure level 0: single sentence only. "What happened?" — nothing else.',
+ stream:()=>[evCard('AGENT','COMPLETED','Task completed.','apex-agent-fin',ts(60),'info','')],
+ detail:{l0:'An agent completed a task.',l1:{note:'L0 shows only: "what happened" in one sentence. Select L1 for more.'},l2:{},l3:{},l4:{}}
+},
+{id:'V-ACTIVITY-39',name:'L1 Disclosure',connState:'LIVE',stale:false,
+ notes:'Disclosure level 1: what + when + where + by whom.',
+ stream:()=>[evCard('AGENT','COMPLETED','Task T-2847 completed.','apex-agent-01',ts(60),'info','')],
+ detail:{l0:'An agent completed a task.',l1:{when:tsFull(60),where:'Agent pipeline / dashboard surface',by:'apex-agent-01 (Agent)'},l2:{note:'Select L2 for metadata.'},l3:{},l4:{}}
+},
+{id:'V-ACTIVITY-40',name:'L2 Disclosure',connState:'LIVE',stale:false,
+ notes:'Disclosure level 2: L1 + metadata — duration, model, cost, stages, outcome, severity.',
+ stream:()=>[evCard('AGENT','COMPLETED','Task T-2847 completed — financial analysis','apex-agent-fin',ts(94),'info','')],
+ detail:{l0:'An agent completed a task.',l1:{when:tsFull(94),where:'Agent pipeline',by:'apex-agent-fin'},l2:{duration:'94s',model:'claude-sonnet-4-6',cost_usd:'$0.023',stages:'4/4',outcome:'Success — output generated',severity:'INFO'},l3:{note:'Select L3 for evidence.'},l4:{}}
+},
+{id:'V-ACTIVITY-41',name:'L3 Disclosure',connState:'LIVE',stale:false,
+ notes:'Disclosure level 3: L2 + evidence + provenance + related records + correlation_id.',
+ stream:()=>[evCard('AGENT','COMPLETED','Task T-2847 — L3 evidence available','apex-agent-fin',ts(94),'info','')],
+ detail:{l0:'An agent completed a task.',l1:{when:tsFull(94),where:'Agent pipeline',by:'apex-agent-fin'},l2:{duration:'94s',model:'claude-sonnet-4-6',cost_usd:'$0.023',stages:'4/4'},l3:{evidence:{commit_hash:'a3f7e29',files_changed:['output/summary.md'],source:'apex_timeline'},provenance:{origin:'lib/auto-pipeline.js',captured_at:tsFull(94)},related:['Task T-2847','Notification N-0092'],correlation:'NOT AVAILABLE — no correlation_id in production in-memory bus'},l4:{note:'Select L4 for constitutional/governance detail.'}}
+},
+{id:'V-ACTIVITY-42',name:'L4 Disclosure',connState:'LIVE',stale:false,
+ notes:'Disclosure level 4: L3 + constitutional + governance + execution authority chain + privacy boundary.',
+ stream:()=>[evCard('AGENT','COMPLETED','Task T-2847 — full L4 disclosure','apex-agent-fin',ts(94),'info','')],
+ detail:{l0:'An agent completed a task.',l1:{when:tsFull(94),where:'Agent pipeline',by:'apex-agent-fin'},l2:{duration:'94s',model:'claude-sonnet-4-6',cost_usd:'$0.023'},l3:{evidence:{commit_hash:'a3f7e29'},provenance:{origin:'lib/auto-pipeline.js'},related:['Task T-2847']},l4:{constitutional:'Gate: A1+A2+A3+A4+A5 — all PASS. Constitutional record: CRID-0041.',governance:'FINANCE domain — standard governance. Source: APEX_GOVERNANCE_MODEL.md.',execution:'EXECUTED — task completed. Output persisted. Not merely proposed.',privacy:'⊘ Agent internal chain-of-thought: PROTECTED — NOT EXPOSED at any disclosure level. Observable: task metadata, outcome, evidence, provenance, constitutional gate result.'}}
+},
+{id:'V-ACTIVITY-43',name:'Live Connection',connState:'LIVE',stale:false,
+ notes:'Connection state: LIVE. Green indicator. Events arriving in real time. WebSocket /ws/viz active.',
+ stream:()=>[
+  evCard('AGENT','IN_PROGRESS','Live event — agent processing active','apex-agent-01',ts(1),'info','<span>⬤ Live</span>',true),
+  evCard('TOOL','COMPLETED','Tool completed — web_search','apex-agent-01',ts(4),'info',''),
+ ],
+ detail:{l0:'Activity surface is live.',l1:{when:'Now',where:'/ws/viz WebSocket',by:'system'},l2:{connection_state:'LIVE',websocket_endpoint:'/ws/viz',heartbeat:'60s ping/pong',ring_buffer:'300 events (viz-broadcaster.js)',last_event:'<1s ago'},l3:{evidence:{source:'lib/ws-handler.js + lib/viz-broadcaster.js',channel:'/ws/viz',compression:'perMessageDeflate 1KB threshold'}},l4:{note:'Live connection delivers real-time events. Connection state is observable. Prototype simulates this — production uses /ws/viz.'}}
+},
+{id:'V-ACTIVITY-44',name:'Degraded Connection',connState:'DEGRADED',stale:false,
+ notes:'Connection state: DEGRADED. WebSocket connected but high latency. Event delivery delayed. Stale warning on old events.',
+ stream:()=>[
+  evCard('AGENT','COMPLETED','Event received — 2.4s delay detected','apex-agent-01',ts(35),'warning','<span>⚠ Delayed</span>'),
+  evCard('TOOL','COMPLETED','Event received — 2.1s delay','apex-agent-01',ts(38),'warning',''),
+ ],
+ detail:{l0:'Activity surface is in a degraded state.',l1:{when:'Now',where:'/ws/viz',by:'system'},l2:{connection_state:'DEGRADED',latency:'>2s',events_delayed:true,stale_threshold:'30s'},l3:{evidence:{source:'ws-handler.js keepalive detection',note:'High latency detected via ping/pong timing'}},l4:{note:'DEGRADED: connected but slow. Events may be delayed. Stale markers will appear on events >30s old.'}}
+},
+{id:'V-ACTIVITY-45',name:'Disconnected',connState:'DISCONNECTED',stale:false,
+ notes:'Connection state: DISCONNECTED. WebSocket closed. No live events. Disconnected banner shown.',
+ stream:()=>[
+  evCard('AGENT','COMPLETED','Last event before disconnect (stale)','apex-agent-01',ts(90),'info','<span class="stale-tag">⚠ STALE</span>'),
+ ],
+ detail:{l0:'Activity surface is disconnected.',l1:{when:tsFull(90),where:'/ws/viz',by:'system'},l2:{connection_state:'DISCONNECTED',websocket:'CLOSED',last_event:tsFull(90),live_events:false,action:'Reconnect to restore live activity'},l3:{evidence:{source:'ws-handler.js connection close event'}},l4:{note:'DISCONNECTED: no live events. Historical data shown. Data is stale — marked clearly. Do not present stale data as live.'}}
+},
+{id:'V-ACTIVITY-46',name:'Reconnecting',connState:'RECONNECTING',stale:true,
+ notes:'Connection state: RECONNECTING. Attempt 2/5. Backoff: 4s. Historical data shown, marked stale.',
+ stream:()=>[
+  evCard('AGENT','COMPLETED','Event from before disconnect (stale)','apex-agent-01',ts(55),'info','<span class="stale-tag">⚠ STALE</span>'),
+  evCard('TOOL','COMPLETED','Event from before disconnect (stale)','apex-agent-01',ts(60),'info','<span class="stale-tag">⚠ STALE</span>'),
+ ],
+ detail:{l0:'Activity surface is reconnecting.',l1:{when:'Now',where:'/ws/viz',by:'system'},l2:{connection_state:'RECONNECTING',attempt:'2/5',backoff:'4s',last_live_event:tsFull(55)},l3:{evidence:{source:'ws-handler.js reconnect logic'}},l4:{note:'RECONNECTING: events shown are stale. Last live update: 55s ago. Stale threshold: 30s. Events clearly marked STALE.'}}
+},
+{id:'V-ACTIVITY-47',name:'Stale Activity',connState:'RECONNECTING',stale:true,
+ notes:'Connection RECONNECTING. All events >30s old marked STALE. Not removed — shown with clear marking.',
+ stream:()=>[
+  evCard('AGENT','COMPLETED','Financial summary task — 47s ago (stale)','apex-agent-fin',ts(47),'info','<span class="stale-tag">⚠ STALE</span>'),
+  evCard('MEMORY','COMPLETED','Memory checkpoint — 50s ago (stale)','system',ts(50),'info','<span class="stale-tag">⚠ STALE</span>'),
+  evCard('TOOL','COMPLETED','Tool web_search — 53s ago (stale)','apex-agent-01',ts(53),'info','<span class="stale-tag">⚠ STALE</span>'),
+ ],
+ detail:{l0:'Stale activity — last live update 47s ago.',l1:{when:tsFull(47),where:'Stale cache',by:'N/A — reconnecting'},l2:{stale:true,stale_since:tsFull(47),stale_threshold:'30s',connection_state:'RECONNECTING',note:'Events marked STALE are cached — not live. Do not act on stale data.'},l3:{},l4:{note:'STALE data is visible and clearly labelled. It is not removed. Stale ≠ incorrect — it is outdated.'}}
+},
+{id:'V-ACTIVITY-48',name:'Unknown Event',connState:'LIVE',stale:false,
+ notes:'Event type UNKNOWN. Actor NOT RECORDED. Category UNKNOWN. Fields not fabricated.',
+ stream:()=>[evCard('UNKNOWN','UNKNOWN','UNKNOWN_SIGNAL_7734 — type unrecognised — payload: { raw: "…" }','NOT RECORDED',ts(10),'warning','')],
+ detail:{
+  l0:'An unknown event type was received.',
+  l1:{when:tsFull(10),where:'/ws/viz (unknown source)',by:'NOT RECORDED'},
+  l2:{event_type:'UNKNOWN_SIGNAL_7734',category:'UNKNOWN',actor:'NOT RECORDED',payload_summary:'{raw: "…"}',interpretation:'NOT AVAILABLE — type unrecognised'},
+  l3:{evidence:{raw_received:true,parsed:false},provenance:{origin:'UNKNOWN',trace_id:'NOT AVAILABLE'},related:[],correlation:'NOT AVAILABLE',note:'Unknown fields are displayed as UNKNOWN. Interpretation is NOT fabricated.'},
+  l4:{constitutional:'Cannot evaluate — event type unknown.',governance:'Cannot evaluate — event type unknown.',privacy:'Unknown event payload not fully displayed — raw excerpt only.'}
+ }
+},
+{id:'V-ACTIVITY-49',name:'Missing Provenance',connState:'LIVE',stale:false,
+ notes:'Event with missing provenance. Shown explicitly as NOT RECORDED. Not fabricated.',
+ stream:()=>[evCard('AGENT','COMPLETED','Task T-2870 completed — provenance not recorded','UNKNOWN',ts(30),'warning','<span>⚠ No provenance</span>')],
+ detail:{
+  l0:'A task completed, but provenance is unavailable.',
+  l1:{when:tsFull(30),where:'Agent pipeline',by:'UNKNOWN'},
+  l2:{task_id:'T-2870',state:'COMPLETED',provenance:'NOT RECORDED',actor:'UNKNOWN'},
+  l3:{evidence:{source:'apex_timeline (limited fields)'},provenance:{origin:'NOT RECORDED',captured_at:'NOT RECORDED',trace_id:'NOT AVAILABLE',note:'⚠ Provenance unavailable for this event. This is a production gap — the in-memory event bus does not persist provenance fields for all event types.'},related:[],correlation:'NOT AVAILABLE'},
+  l4:{note:'Provenance is NOT fabricated. Where unavailable: displayed as NOT RECORDED. This is an acknowledged production gap (Gap #3: no trace_id in event bus).',privacy:'Missing provenance does not expose chain-of-thought — it reflects a recording gap only.'}
+ }
+},
+{id:'V-ACTIVITY-50',name:'Privacy Boundary',connState:'LIVE',stale:false,
+ notes:'Voice session THINKING state. Private chain-of-thought: PROTECTED — NOT EXPOSED. Explicit boundary label at all disclosure levels.',
+ stream:()=>[evCard('VOICE','IN_PROGRESS','Voice session S-0515 — THINKING — state visible; reasoning protected','user',ts(3),'info','<span>⊘ CoT protected</span>')],
+ detail:{
+  l0:'APEX is thinking. Internal reasoning is protected.',
+  l1:{when:tsFull(3),where:'/ws/gemini-live',by:'user session S-0515'},
+  l2:{session_id:'S-0515',state:'THINKING',duration_so_far:'3s',thinking_note:'THINKING is an observable lifecycle state — not a transcript.'},
+  l3:{evidence:{state_event:'VOICE_STARTED + (thinking state)'},provenance:{origin:'routes/gemini-live.js'},related:['Session S-0515'],correlation:'NOT AVAILABLE'},
+  l4:{constitutional:'A1-IDENTITY + user session. ALLOW.',governance:'VOICE domain. Standard.',execution:'EXECUTING — voice session in progress.',privacy:'⊘ PRIVATE CHAIN-OF-THOUGHT — NOT EXPOSED. This is an absolute boundary. The THINKING state is visible as a lifecycle state only. Internal reasoning, model activations, and chain-of-thought are never exposed at any disclosure level (L0–L4). This is a canonical UX-17 invariant.'}
+ }
+},
+];
+
+// ─── LIVE STREAM EVENTS (simulate) ───────────────────────────────────────────
+const LIVE_TYPES = [
+ {cat:'AGENT',state:'IN_PROGRESS',desc:'Task processing — pipeline active',actor:'apex-agent-01',sev:'info'},
+ {cat:'TOOL',state:'COMPLETED',desc:'Tool web_search completed — 5 results',actor:'apex-agent-01',sev:'info'},
+ {cat:'MEMORY',state:'COMPLETED',desc:'Memory checkpoint saved',actor:'system',sev:'info'},
+ {cat:'VOICE',state:'COMPLETED',desc:'Voice session completed — intent captured',actor:'user',sev:'info'},
+ {cat:'NOTIFICATION',state:'COMPLETED',desc:'Notification delivered',actor:'system',sev:'info'},
+];
+let liveIdx = 0;
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function renderScenariosList(){
+  const list = document.getElementById('scenariosList');
+  list.innerHTML = SCENARIOS.map((s,i)=>`
+    <li class="scenario-item${activeScenario===i?' active':''}" onclick="loadScenario(${i})" role="listitem" tabindex="0"
+        onkeydown="if(event.key==='Enter'||event.key===' ')loadScenario(${i})"
+        aria-label="${s.id}: ${s.name}" aria-current="${activeScenario===i?'true':'false'}">
+      <span class="scenario-num">${(i+1).toString().padStart(2,'0')}</span>
+      <span class="scenario-name">${s.name}</span>
+    </li>`).join('');
+}
+
+function renderCategoryFilters(){
+  const el = document.getElementById('catFilters');
+  el.innerHTML = CATEGORIES.map(c=>`
+    <button class="cat-pill${catFilter===c?' active':''}" onclick="setCatFilter('${c}')"
+            aria-pressed="${catFilter===c}" aria-label="Filter: ${c}">${c}</button>`).join('');
+}
+
+function loadScenario(i){
+  activeScenario = i;
+  const s = SCENARIOS[i];
+  // connection state
+  updateConnectionState(s.connState, s.stale);
+  // re-render list
+  renderScenariosList();
+  // render stream
+  renderStream(s);
+  // render detail
+  renderDetail(s, disclosureLevel);
+  // stop live if not live scenario
+  if(liveMode && i!==0 && i!==42) stopLive();
+}
+
+function renderStream(s){
+  const area = document.getElementById('streamArea');
+  const cards = s.stream();
+  area.innerHTML = `<div class="scenario-note">📋 ${s.id} — ${s.notes}</div>` +
+    `<div role="list">${cards.join('')}</div>`;
+}
+
+function renderDetail(s, level){
+  const d = s.detail;
+  const content = document.getElementById('detailContent');
+  if(level===0){
+    content.innerHTML = `<div class="detail-summary">${d.l0}</div>
+      <div class="info-block"><p>L0 — What happened? Select a higher level for more detail.</p></div>`;
+  } else if(level===1){
+    const l1 = d.l1||{};
+    content.innerHTML = `<div class="detail-summary">${d.l0}</div>
+      <div class="detail-section">
+        <div class="detail-section-label">L1 — When / Where / By Whom</div>
+        ${row('When',l1.when||'NOT RECORDED')}
+        ${row('Where',l1.where||'NOT RECORDED')}
+        ${row('By',l1.by||'NOT RECORDED')}
+        ${l1.query?row('Query',l1.query):''}
+        ${l1.matched!==undefined?row('Matched',l1.matched+' events'):''}
+        ${l1.note?`<div class="info-block" style="margin-top:8px"><p>${l1.note}</p></div>`:''}
+      </div>`;
+  } else if(level===2){
+    const l1=d.l1||{}, l2=d.l2||{};
+    content.innerHTML = `<div class="detail-summary">${d.l0}</div>
+      <div class="detail-section">
+        <div class="detail-section-label">L2 — Metadata</div>
+        ${row('When',l1.when||'NOT RECORDED')}${row('By',l1.by||'NOT RECORDED')}
+        ${Object.entries(l2).filter(([k])=>k!=='note').map(([k,v])=>row(k,String(v))).join('')}
+        ${l2.note?`<div class="warn-block" style="margin-top:8px"><p>${l2.note}</p></div>`:''}
+      </div>`;
+  } else if(level===3){
+    const l3=d.l3||{};
+    let html=`<div class="detail-summary">${d.l0}</div>`;
+    if(l3.evidence&&Object.keys(l3.evidence).length){
+      html+=`<div class="detail-section"><div class="detail-section-label">Evidence</div>
+        <div class="evidence-block">${Object.entries(l3.evidence).map(([k,v])=>`<div class="ev-row"><span class="ev-key">${k}:</span><span>${String(v)}</span></div>`).join('')}</div></div>`;
+    }
+    if(l3.provenance&&Object.keys(l3.provenance).length){
+      html+=`<div class="detail-section"><div class="detail-section-label">Provenance</div>
+        <div class="provenance-block">${Object.entries(l3.provenance).map(([k,v])=>`<div class="ev-row"><span class="ev-key">${k}:</span><span>${String(v)}</span></div>`).join('')}</div></div>`;
+    }
+    if(l3.related&&l3.related.length){
+      html+=`<div class="detail-section"><div class="detail-section-label">Related Records</div>
+        <div class="related-list">${l3.related.map(r=>`<div class="related-item"><span class="related-item-label">${r}</span><span class="related-item-id">→</span></div>`).join('')}</div></div>`;
+    }
+    if(l3.correlation){
+      html+=`<div class="detail-section"><div class="detail-section-label">Correlation</div>
+        <div class="info-block"><p>${l3.correlation}</p></div></div>`;
+    }
+    if(l3.note){html+=`<div class="info-block"><p>${l3.note}</p></div>`;}
+    content.innerHTML = html;
+  } else {
+    const l4=d.l4||{};
+    let html=`<div class="detail-summary">${d.l0}</div>`;
+    if(l4.constitutional){html+=`<div class="detail-section"><div class="detail-section-label">Constitutional</div><div class="evidence-block"><div class="ev-row"><span class="ev-key">evaluation:</span><span>${l4.constitutional}</span></div></div></div>`;}
+    if(l4.governance){html+=`<div class="detail-section"><div class="detail-section-label">Governance</div><div class="evidence-block"><div class="ev-row"><span class="ev-key">state:</span><span>${l4.governance}</span></div></div></div>`;}
+    if(l4.execution){html+=`<div class="detail-section"><div class="detail-section-label">Execution</div><div class="info-block"><p>${l4.execution}</p></div></div>`;}
+    if(l4.privacy){html+=`<div class="privacy-boundary"><div class="pb-icon">⊘</div><div class="pb-title">Privacy Boundary</div><p>${l4.privacy}</p></div>`;}
+    else{html+=`<div class="privacy-boundary"><div class="pb-icon">⊘</div><div class="pb-title">Private Chain-of-Thought — Not Exposed</div><p>Internal reasoning is never exposed at any disclosure level. This is a canonical UX-17 invariant.</p></div>`;}
+    if(l4.note){html+=`<div class="info-block"><p>${l4.note}</p></div>`;}
+    content.innerHTML = html;
+  }
+}
+
+function row(k,v){return `<div class="detail-row"><span class="detail-key">${k}</span><span class="detail-val${v&&v.length>20?' mono':''}">${v}</span></div>`;}
+
+// ─── DISCLOSURE ───────────────────────────────────────────────────────────────
+function setDisclosure(l){
+  disclosureLevel=l;
+  for(let i=0;i<5;i++){
+    const b=document.getElementById('dl'+i), t=document.getElementById('rt'+i);
+    const act=i===l;
+    b.classList.toggle('active',act); b.setAttribute('aria-pressed',act);
+    t.classList.toggle('active',act); t.setAttribute('aria-selected',act);
+    t.setAttribute('tabindex',act?'0':'-1');
+  }
+  if(activeScenario>=0) renderDetail(SCENARIOS[activeScenario],l);
+}
+
+// ─── CATEGORY FILTER ─────────────────────────────────────────────────────────
+function setCatFilter(c){
+  catFilter = catFilter===c ? null : c;
+  renderCategoryFilters();
+  if(activeScenario>=0) renderStream(SCENARIOS[activeScenario]);
+}
+
+// ─── SEARCH ──────────────────────────────────────────────────────────────────
+function onSearch(q){searchQuery=q;}
+
+// ─── CONNECTION STATE ─────────────────────────────────────────────────────────
+function updateConnectionState(state, stale){
+  globalStale = stale || state==='RECONNECTING' || state==='STALE';
+  const cs=document.getElementById('connStatus');
+  const cl=document.getElementById('connLabel');
+  cs.className='conn-status conn-'+state.toLowerCase();
+  cl.textContent=state;
+  cs.setAttribute('aria-label','Connection status: '+state);
+  const staleBanner=document.getElementById('staleBanner');
+  const disconnBanner=document.getElementById('disconnBanner');
+  staleBanner.classList.toggle('visible',globalStale);
+  if(disconnBanner) disconnBanner.style.display=(state==='DISCONNECTED'?'flex':'none');
+  if(globalStale){
+    staleSeconds=0;
+    clearInterval(staleTimer);
+    staleTimer=setInterval(()=>{staleSeconds++;document.getElementById('staleAge').textContent=staleSeconds+'s';},1000);
+  } else {
+    clearInterval(staleTimer);
+  }
+}
+
+// ─── LIVE SIMULATION ──────────────────────────────────────────────────────────
+function toggleLive(){
+  liveMode=!liveMode;
+  const btn=document.getElementById('liveBtn');
+  btn.classList.toggle('active',liveMode);
+  btn.setAttribute('aria-pressed',liveMode);
+  if(liveMode){
+    loadScenario(0);
+    liveInterval=setInterval(simulateLiveEvent,3000);
+  } else {
+    stopLive();
+  }
+}
+
+function stopLive(){
+  liveMode=false;
+  document.getElementById('liveBtn').classList.remove('active');
+  document.getElementById('liveBtn').setAttribute('aria-pressed','false');
+  clearInterval(liveInterval);
+}
+
+function simulateLiveEvent(){
+  const t=LIVE_TYPES[liveIdx%LIVE_TYPES.length]; liveIdx++;
+  liveCount++;
+  const area=document.getElementById('streamArea');
+  const list=area.querySelector('[role="list"]');
+  if(!list) return;
+  const card=document.createElement('div');
+  card.innerHTML=evCard(t.cat,t.state,t.desc+' [live #'+liveCount+']',t.actor,ts(0),t.sev,'',true);
+  list.insertBefore(card.firstChild,list.firstChild);
+  const cards=list.querySelectorAll('.event-card');
+  if(cards.length>20) cards[cards.length-1].remove();
+  // announce to screen reader
+  area.setAttribute('aria-label','Activity stream — new event: '+t.desc);
+}
+
+function simulateReconnect(){
+  updateConnectionState('RECONNECTING',true);
+  setTimeout(()=>updateConnectionState('LIVE',false),3000);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+renderScenariosList();
+renderCategoryFilters();
+loadScenario(0);
+</script>
+</body>
+</html>
